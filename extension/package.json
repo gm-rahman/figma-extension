@@ -1,0 +1,12 @@
+{
+  "name": "html-to-figma-extension",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.0"
+  }
+}

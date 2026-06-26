@@ -1,0 +1,18 @@
+{
+  "name": "html-to-figma-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node run-capture.mjs",
+    "live": "node run-capture.mjs --live",
+    "analyze": "node analyze.mjs",
+    "preview": "node visual-diff.mjs",
+    "test": "node run-capture.mjs && node analyze.mjs && node visual-diff.mjs",
+    "test:live": "node run-capture.mjs --live && node analyze.mjs && node visual-diff.mjs",
+    "snapshot:update": "node run-capture.mjs --update-snapshot"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0",
+    "playwright": "^1.45.0"
+  }
+}

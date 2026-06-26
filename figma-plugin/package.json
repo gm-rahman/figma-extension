@@ -1,0 +1,13 @@
+{
+  "name": "html-to-figma-plugin",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js && npx esbuild src/plugin.ts --bundle --outfile=dist/plugin.js --target=es2017 --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.95.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  }
+}

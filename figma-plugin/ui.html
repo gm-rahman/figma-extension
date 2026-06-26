@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 12px;
+        background: #1e1e1e;
+        color: #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      header {
+        padding: 12px 14px 10px;
+        border-bottom: 1px solid #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      header h1 { font-size: 13px; font-weight: 600; color: #fff; }
+
+      .toolbar {
+        padding: 10px 14px;
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid #2a2a2a;
+      }
+
+      .btn {
+        padding: 7px 12px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background 0.1s;
+      }
+
+      .btn-primary { background: #7c5cfc; color: #fff; flex: 1; }
+      .btn-primary:hover { background: #6b4de0; }
+      .btn-ghost { background: #2c2c2c; color: #ccc; }
+      .btn-ghost:hover { background: #383838; }
+      .btn-import { background: #2c2c2c; color: #a0a0ff; padding: 5px 10px; font-size: 11px; }
+      .btn-import:hover { background: #383838; }
+
+      #capture-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 14px;
+      }
+
+      .card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 10px;
+        border-radius: 6px;
+        background: #252525;
+        margin-bottom: 6px;
+        gap: 8px;
+      }
+
+      .card:hover { background: #2c2c2c; }
+
+      .card-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+      }
+
+      .card-title {
+        font-size: 12px;
+        font-weight: 500;
+        color: #e0e0e0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .card-meta { font-size: 10px; color: #666; }
+
+      .empty { color: #555; font-size: 12px; text-align: center; margin-top: 40px; }
+
+      .status {
+        padding: 8px 14px;
+        font-size: 11px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+        border-top: 1px solid #2a2a2a;
+      }
+
+      .status.loading { color: #9090f0; }
+      .status.success { color: #4caf82; }
+      .status.error   { color: #f07070; }
+      .status.idle    { color: transparent; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>HTML to Figma</h1>
+    </header>
+
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btn-latest">Import Latest</button>
+      <button class="btn btn-ghost" id="btn-refresh">Refresh</button>
+    </div>
+
+    <div id="capture-list"></div>
+
+    <div class="status idle" id="status"></div>
+
+    <script>
+      // ui.ts compiled inline by tsc
+    </script>
+    <script src="dist/ui.js"></script>
+  </body>
+</html>

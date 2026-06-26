@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp *)",
+      "PowerShell(claude mcp add --scope local --transport http superwall-editor \"https://superwall-mcp.superwall.com/editor-mcp\")",
+      "PowerShell(Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force)",
+      "mcp__visualize__read_me"
+    ]
+  }
+}
