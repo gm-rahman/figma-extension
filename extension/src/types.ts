@@ -104,6 +104,20 @@ export type MessageToContent =
   | { type: 'START_ELEMENT_PICKER' }
   | { type: 'CANCEL_PICKER' };
 
+// ── Capture progress (content → popup) ───────────────────────────────────────
+export type CapturePhase = 'preparing' | 'reading' | 'rasterizing' | 'saving';
+
+export interface CaptureProgressMessage {
+  type: 'CAPTURE_PROGRESS';
+  phase: CapturePhase;
+  /** Pre-formatted, user-facing string the popup renders verbatim. */
+  message: string;
+  /** Present only for the 'rasterizing' phase. */
+  current?: number;
+  total?: number;
+}
+
 export type MessageFromContent =
   | { type: 'CAPTURE_DONE'; id: string }
-  | { type: 'CAPTURE_ERROR'; message: string };
+  | { type: 'CAPTURE_ERROR'; message: string }
+  | CaptureProgressMessage;

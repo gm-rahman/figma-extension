@@ -1,4 +1,4 @@
-import { CapturePayload, MessageToContent } from './types';
+import { CapturePayload, CapturePhase, CaptureProgressMessage, MessageToContent } from './types';
 import { buildPayload, getRasterTargets } from './capture-core';
 
 let pickerActive = false;
@@ -55,6 +55,14 @@ function onPickerClick(e: MouseEvent) {
 
 // ── Capture + send ─────────────────────────────────────────────────────────
 
+// Strictly-typed progress emitter (content → popup). Fire-and-forget; sent
+// synchronously at each phase boundary so the popup updates immediately and is
+// never blocked by the async capture work that follows.
+function progress(phase: CapturePhase, message: string, current?: number, total?: number) {
+  const msg: CaptureProgressMessage = { type: 'CAPTURE_PROGRESS', phase, message, current, total };
+  chrome.runtime.sendMessage(msg).catch(() => {});
+}
+
 async function captureAndSend(mode: 'full-page') {
   const savedX = window.scrollX;
   const savedY = window.scrollY;
@@ -63,12 +71,14 @@ async function captureAndSend(mode: 'full-page') {
   // scrolling: trigger lazy-loaded images, below-the-fold sections, and
   // scroll-reveal animations. Mirrors test/run-capture.mjs so live captures and
   // the offline harness agree. Returns elements we force-revealed, to restore.
+  progress('preparing', 'Preparing page (loading images & sections)…');
   const revealed = await prepareDomForCapture();
 
   // Scroll to top so getBoundingClientRect + scrollY = document coords
   window.scrollTo(0, 0);
   await new Promise(r => setTimeout(r, 80)); // wait for layout to settle
 
+  progress('reading', 'Reading layout…');
   const payload = buildPayload(document.body, mode);
 
   // Rasterize Figma-impossible elements: scroll each into view and ask the
@@ -85,6 +95,7 @@ async function captureAndSend(mode: 'full-page') {
   for (const el of revealed) el.style.removeProperty('opacity');
   window.scrollTo(savedX, savedY); // restore
 
+  progress('saving', 'Saving capture…');
   chrome.runtime.sendMessage({ type: 'SAVE_CAPTURE', payload }, (res) => {
     if (chrome.runtime.lastError || !res?.ok) {
       chrome.runtime.sendMessage({
@@ -144,7 +155,10 @@ async function rasterizeFlaggedElements(): Promise<Record<string, string>> {
   if (!targets.length) return images;
 
   const dpr = window.devicePixelRatio || 1;
+  let done = 0;
   for (const t of targets) {
+    done++;
+    progress('rasterizing', `Capturing effects ${done}/${targets.length}…`, done, targets.length);
     const el = document.querySelector(`[data-h2f-rid="${t.id}"]`) as HTMLElement | null;
     if (!el) continue;
 

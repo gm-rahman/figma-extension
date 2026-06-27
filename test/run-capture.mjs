@@ -179,6 +179,38 @@ if (rasterTargets.length) {
   }
 }
 
+// ── Fetch + embed remote images (mirror the extension background worker) ──────
+// The harness used to only embed rasterized PNGs, so preview.html hotlinked remote
+// <img>/background URLs — which CDNs often block, making the preview look broken
+// even when the capture is correct. Fetch them here (with the page referer/cookies)
+// so the preview is self-contained AND we learn which images truly fail to fetch.
+const imgUrls = new Set();
+const collect = (n) => {
+  if (n.src && /^https?:/.test(n.src)) imgUrls.add(n.src);
+  const bg = n.style && n.style.backgroundImageUrl;
+  if (bg && /^https?:/.test(bg)) imgUrls.add(bg);
+  (n.children || []).forEach(collect);
+};
+payload.nodes.forEach(collect);
+
+payload.images = payload.images || {};
+let imgOk = 0, imgFail = 0;
+const failedUrls = [];
+for (const url of imgUrls) {
+  if (payload.images[url]) continue;
+  try {
+    const resp = await page.request.get(url, { headers: { referer: target }, timeout: 8000 });
+    if (!resp.ok()) { imgFail++; failedUrls.push(`${resp.status()} ${url.slice(0, 70)}`); continue; }
+    const ct = resp.headers()['content-type'] || 'image/png';
+    if (!ct.startsWith('image/')) { imgFail++; failedUrls.push(`non-image ${url.slice(0, 70)}`); continue; }
+    const b64 = Buffer.from(await resp.body()).toString('base64');
+    payload.images[url] = `data:${ct.split(';')[0]};base64,${b64}`;
+    imgOk++;
+  } catch (e) {
+    imgFail++; failedUrls.push(`ERR ${url.slice(0, 70)}`);
+  }
+}
+
 await browser.close();
 
 // ── write capture.json + summary ─────────────────────────────────────────────
@@ -194,6 +226,8 @@ console.log(`✓ Captured ${target}`);
 console.log(`  viewport: ${viewportW}x${viewportH}   page: ${payload.viewport.width}x${payload.viewport.height}`);
 console.log(`  top-level: ${payload.nodes.length}    total: ${total} nodes`);
 if (rasterTargets.length) console.log(`  rasterized: ${rasterOk} ok${rasterFail ? `, ${rasterFail} failed` : ''}`);
+console.log(`  images:    ${imgOk} fetched${imgFail ? `, ${imgFail} FAILED` : ''}`);
+failedUrls.slice(0, 8).forEach(u => console.log(`    ✗ ${u}`));
 console.log(`  written:   ${outPath}`);
 if (consoleErrors.length) console.log(`  ⚠ page errors: ${consoleErrors.length}`);
 

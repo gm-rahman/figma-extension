@@ -284,6 +284,86 @@ Root-caused two separate issues via the data, no guessing:
 Decision log: SVG → vector (editable, on-brand) over rasterize; image pipeline →
 full harden over minimal. Plugin stays `tsc --noEmit` clean; extension builds clean.
 
+### Session 2026-06-27 (cont.) — Lazy image src + blank-capture diagnosis
+User reported a near-blank, narrow-right-column capture of fresha.com vs the full
+original. Drove the harness against live fresha.com to get data, not guesses:
+- **Engine confirmed healthy:** `--url=https://www.fresha.com --viewport=1440x900`
+  → 82 images (all with src), 270 SVGs, 125 pseudo-elements, full 1440 width,
+  0 problems. So the blank/narrow capture was a **stale extension build** (made
+  before `prepareDomForCapture()`/lazy-load existed) — fix is reload + recapture.
+- **Lazy `srcset`/`data-src` fallback added** (`resolveImgSrc` in capture-core):
+  when `currentSrc` is empty or a 1px gif placeholder, fall back to srcset
+  (largest), `data-src`, `data-lazy-src`, `data-srcset`, then `src`. Covers lazy
+  images that expose a URL without having loaded.
+- Confirmed `content.ts` already awaits `prepareDomForCapture()` (full-page scroll
+  + reveal + settle) before `buildPayload` — extension already mirrors the harness.
+
+Takeaway documented for the user: DevTools shows everything because *you scrolled*;
+a one-shot capture must first trigger lazy-load (we do) and re-measure at a chosen
+viewport. After reloading the extension, live captures match the harness.
+
+### Session 2026-06-27 (cont.) — Capture progress UI
+Made the load-waiting visible so the user can confirm it runs (and so long pages
+don't look frozen):
+- `content.ts` emits `CAPTURE_PROGRESS` messages at each phase: "Preparing page
+  (loading images & sections)…", "Reading layout…", "Capturing effects N/total…",
+  "Saving capture…".
+- `popup.ts` shows each progress message and **resets the capture timeout** on every
+  update (raised 15s → 60s) so it only fires on a genuine stall, not on slow lazy-load.
+- Confirmed no page refresh: capture primes the page in place (scroll + reveal +
+  settle) and restores scroll/opacity afterward — SPA/auth/form state preserved.
+- **Strict typing pass:** `CapturePhase` + `CaptureProgressMessage` ({phase, message,
+  current?, total?}) added to `types.ts`; `MessageFromContent` is now a typed union
+  incl. progress. `content.ts progress()` and the `popup.ts` listener are fully
+  typed — no `any` in the message path.
+
+### Session 2026-06-27 (cont.) — Harness image embedding (preview fidelity)
+User marked a fresha.com preview: app phone/map, business dashboard, review
+avatars "did not fetch", and "gradient is missing". Investigated with data (live
+DOM probe + capture audit), no assumptions:
+- **Root cause (single):** the harness only embedded *rasterized* PNGs, so
+  `preview.html` hotlinked remote `<img>`/bg URLs — Fresha's CDN blocks hotlinking
+  → blank. Every "missing" item had a valid `src` in the capture; the preview just
+  couldn't load them. (Figma was never affected — its background worker fetches.)
+- **Fix:** `run-capture.mjs` now fetches every remote `src`/`backgroundImageUrl`
+  via `page.request.get` (with page referer) and embeds as data-URLs into
+  `payload.images`, mirroring the extension's `background.ts`. Result: **82/82
+  fetched, 0 failed**; preview is now self-contained and trustworthy.
+- **"Gradient is missing" — diagnosed, not a bug.** Live-DOM probe found ZERO
+  gradient elements (w>150) in the business band; the green/lime glow is **baked
+  into the 2082×776 dashboard `<img>`**. Embedding that image restores it. All four
+  marked items shared the one root cause.
+- **Noted for future (not this fix):** card/review rows are horizontal carousels
+  captured in full (x up to ~9514, clipped by `overflow:hidden` live). Preview
+  doesn't clip → they spill right. Real structural item: respect carousel
+  overflow-clip (capture only in-viewport items or set `clipsContent`).
+
+### Session 2026-06-27 (cont.) — Carousel overflow clipping
+Tackled the structural item above. Added `isClippedAway(el, rect)` in capture-core:
+walks clipping ancestors (overflow != visible) PER-AXIS, builds the visible window,
+and drops any element scrolled entirely outside it (8px tolerance). `position:fixed`
+is exempt (escapes clipping). Applied right after the size filter in
+`serializeElement`. Verified on fresha.com @1440:
+- nodes **2257 → 871**, maxRight **~9514 → 1977** (1977 = the partially-visible
+  dashboard image, correctly kept whole), images **82 → 22** (only visible thumbs).
+- Card rows now hold **4 thumbnails each** (was 16-24) — exactly matching the live
+  page's visible carousel. Not over-clipped.
+Result: capture matches what's actually visible; no off-canvas bloat in Figma.
+
+### Session 2026-06-27 (cont.) — `<video>` capture + missing-imagery audit
+User marked up a fresha.com capture flagging missing app-section phone + business
+dashboard. Audited with the harness (data, not guessing):
+- **`<video>` now captured.** `classifyElement` treats `<video>` as image; the
+  serialize image branch uses `video.poster`. Posterless videos (Fresha's app-phone
+  has no poster) are already caught by `rasterizeReason('<video> element')` → the
+  visible frame is screenshotted. Verified: `DownloadApp_video` 246×529 →
+  `rasterize:true`, present in images map.
+- **Audit result: capture is COMPLETE.** All 48 card thumbnails, the "Fresha in
+  numbers" banner (1440×660), and the **business dashboard** (2082×776 @ y=3937)
+  all captured WITH sources. `MAX_IMAGES` already 1000 + 42 MB total guard (prior
+  session), so Figma embeds them all. The user's missing areas were a **stale
+  extension build** — resolved by rebuild + reload + recapture.
+
 ---
 
 ## 4. Current status

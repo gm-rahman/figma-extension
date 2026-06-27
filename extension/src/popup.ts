@@ -1,3 +1,5 @@
+import { MessageFromContent } from './types';
+
 const BACKEND_URL = 'http://localhost:3000';
 
 const btnFullPage = document.getElementById('btn-full-page') as HTMLButtonElement;
@@ -21,12 +23,15 @@ function setLoading(loading: boolean) {
   btnSelectEl.disabled  = loading;
 }
 
+// Lazy-load scrolling + rasterization can take a while on large pages, so the
+// timeout is generous and is RESET on every progress message — it only fires if
+// the capture genuinely stalls.
 function startCaptureTimeout() {
   if (captureTimeout) clearTimeout(captureTimeout);
   captureTimeout = setTimeout(() => {
     setLoading(false);
     setStatus('Timed out. Refresh the page and try again.', 'error');
-  }, 15_000);
+  }, 60_000);
 }
 
 function clearCaptureTimeout() {
@@ -69,12 +74,18 @@ async function sendToTab(tabId: number, msg: object): Promise<boolean> {
   }
 }
 
-// Listen for results from the content script
-chrome.runtime.onMessage.addListener((msg) => {
+// Listen for results from the content script (strictly typed union).
+chrome.runtime.onMessage.addListener((msg: MessageFromContent) => {
+  if (msg.type === 'CAPTURE_PROGRESS') {
+    setStatus(msg.message, 'loading');
+    startCaptureTimeout(); // reset — progress means the capture is still alive
+    return;
+  }
   if (msg.type === 'CAPTURE_DONE') {
     clearCaptureTimeout();
     setLoading(false);
     setStatus('Captured! Open the Figma plugin to import.', 'success');
+    return;
   }
   if (msg.type === 'CAPTURE_ERROR') {
     clearCaptureTimeout();

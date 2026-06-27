@@ -222,6 +222,28 @@ function getControlText(el: Element): { text: string; color: string } | null {
   return null;
 }
 
+// Resolve an <img> URL, falling back through lazy-loading conventions when the
+// image hasn't actually loaded (currentSrc empty): srcset (largest), then common
+// data-* lazy attributes, then the src attribute.
+function resolveImgSrc(img: HTMLImageElement): string | undefined {
+  const live = img.currentSrc || img.src;
+  if (live && !live.startsWith('data:image/gif')) return live;   // ignore 1px gif placeholders
+
+  const pickSrcset = (ss: string | null) => {
+    if (!ss) return undefined;
+    // "url 1x, url2 2x" or "url 480w, url2 1024w" → take the last (largest).
+    const parts = ss.split(',').map(s => s.trim().split(/\s+/)[0]).filter(Boolean);
+    return parts[parts.length - 1];
+  };
+  return pickSrcset(img.getAttribute('srcset'))
+      || img.getAttribute('data-src')
+      || img.getAttribute('data-lazy-src')
+      || pickSrcset(img.getAttribute('data-srcset'))
+      || img.getAttribute('src')
+      || live
+      || undefined;
+}
+
 // ── Rasterization detection ─────────────────────────────────────────────────
 // Returns a reason string when the element uses CSS Figma can't reproduce as
 // native nodes (so we screenshot it instead), or '' when it's natively drawable.
@@ -340,6 +362,35 @@ function hasClippedOverflow(el: Element): boolean {
     if (clips && (d.scrollHeight > d.clientHeight + 2 || d.scrollWidth > d.clientWidth + 2)) return true;
   }
   return false;
+}
+
+// Is this element scrolled/clipped entirely out of view by a clipping ancestor?
+// Horizontal carousels (overflow-x: hidden/auto/scroll) hold many items extending
+// far past the visible strip; the live page shows only the few inside the window.
+// We drop the off-screen ones so the capture matches what's visible (and Figma
+// isn't bloated with hundreds of off-canvas nodes). Clipping is applied PER-AXIS
+// so an element that legitimately overflows a `visible` axis is never dropped.
+const OFFSCREEN_TOL = 8;
+function isClippedAway(el: Element, rect: DOMRect): boolean {
+  const pos = window.getComputedStyle(el).position;
+  if (pos === 'fixed') return false;           // escapes overflow clipping
+  let left = -Infinity, top = -Infinity, right = Infinity, bottom = Infinity, clipped = false;
+  let a = el.parentElement;
+  for (let g = 0; a && g < 100; g++, a = a.parentElement) {
+    const cs = window.getComputedStyle(a);
+    const clipsX = cs.overflowX && cs.overflowX !== 'visible';
+    const clipsY = cs.overflowY && cs.overflowY !== 'visible';
+    if (clipsX || clipsY) {
+      const b = a.getBoundingClientRect();
+      if (clipsX) { left = Math.max(left, b.left); right = Math.min(right, b.right); clipped = true; }
+      if (clipsY) { top = Math.max(top, b.top); bottom = Math.min(bottom, b.bottom); clipped = true; }
+    }
+  }
+  if (!clipped) return false;
+  return rect.right  < left   - OFFSCREEN_TOL ||
+         rect.left   > right  + OFFSCREEN_TOL ||
+         rect.bottom < top    - OFFSCREEN_TOL ||
+         rect.top    > bottom + OFFSCREEN_TOL;
 }
 
 // Walks visible text of a clipped element char-by-char, honouring each text node's
@@ -538,6 +589,7 @@ function isInlineTextContainer(el: Element, s: CSSStyleDeclaration): boolean {
 function classifyElement(el: Element): CaptureNode['type'] {
   const tag = el.tagName.toLowerCase();
   if (tag === 'img') return 'image';
+  if (tag === 'video') return 'image';   // captured via its poster frame
   if (tag === 'svg' || el.closest('svg')) return 'image';
 
   const s = window.getComputedStyle(el);
@@ -901,6 +953,11 @@ function serializeElement(
   const tooSmall = rect.width < MIN_SIZE || rect.height < MIN_SIZE;
   if (tooSmall && !hasVisibleBox(s) && !hasKids) return null;
 
+  // Carousel / overflow clip: skip elements scrolled entirely out of a clipping
+  // ancestor's window (e.g. the 20+ off-screen cards in a horizontal scroller).
+  // Keeps the capture to what's actually visible and prevents huge off-canvas bloat.
+  if (isClippedAway(el, rect)) return null;
+
   capturedCount++;
   const type = classifyElement(el);
   const id   = `node-${++nodeCounter}`;
@@ -957,8 +1014,12 @@ function serializeElement(
   if (type === 'image') {
     const tag = el.tagName.toLowerCase();
     if (tag === 'img') {
-      const src = (el as HTMLImageElement).currentSrc || (el as HTMLImageElement).src;
-      if (src) node.src = src;
+      node.src = resolveImgSrc(el as HTMLImageElement);
+    } else if (tag === 'video') {
+      // <video> can't render in Figma — use its poster frame (the static image
+      // shown before playback). Falls back to the element's background.
+      const v = el as HTMLVideoElement;
+      node.src = v.poster || node.style.backgroundImageUrl || undefined;
     } else if (tag === 'svg') {
       // Serialize the SVG root so the plugin can build NATIVE Figma vector layers
       // (editable shapes) via figma.createNodeFromSvgAsync.
