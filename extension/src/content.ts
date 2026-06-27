@@ -56,9 +56,16 @@ function onPickerClick(e: MouseEvent) {
 // ── Capture + send ─────────────────────────────────────────────────────────
 
 async function captureAndSend(mode: 'full-page') {
-  // Scroll to top so getBoundingClientRect + scrollY = document coords
   const savedX = window.scrollX;
   const savedY = window.scrollY;
+
+  // Prime the page so a full-page capture matches what the user sees after
+  // scrolling: trigger lazy-loaded images, below-the-fold sections, and
+  // scroll-reveal animations. Mirrors test/run-capture.mjs so live captures and
+  // the offline harness agree. Returns elements we force-revealed, to restore.
+  const revealed = await prepareDomForCapture();
+
+  // Scroll to top so getBoundingClientRect + scrollY = document coords
   window.scrollTo(0, 0);
   await new Promise(r => setTimeout(r, 80)); // wait for layout to settle
 
@@ -73,6 +80,9 @@ async function captureAndSend(mode: 'full-page') {
   }
   cleanupRasterTags();
 
+  // Undo our DOM side-effects: restore scroll and remove forced opacity overrides
+  // (the page's own reveal observers keep anything that legitimately became visible).
+  for (const el of revealed) el.style.removeProperty('opacity');
   window.scrollTo(savedX, savedY); // restore
 
   chrome.runtime.sendMessage({ type: 'SAVE_CAPTURE', payload }, (res) => {
@@ -83,6 +93,48 @@ async function captureAndSend(mode: 'full-page') {
       }).catch(() => {});
     }
   });
+}
+
+// Trigger lazy-loaded images, below-the-fold sections, and scroll-reveal
+// animations so a full-page capture is complete. Returns the elements whose
+// opacity we force-revealed, so the caller can undo the override afterwards.
+async function prepareDomForCapture(): Promise<HTMLElement[]> {
+  const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+  // 1) Step down the whole page so lazy content renders + reveal observers fire.
+  const step = Math.round(window.innerHeight * 0.8) || 600;
+  const maxY = document.documentElement.scrollHeight;
+  for (let y = 0; y < maxY; y += step) {
+    window.scrollTo(0, y);
+    await sleep(120);
+  }
+  window.scrollTo(0, 0);
+  await sleep(150);
+
+  // 2) Force-reveal scroll-reveal elements the fast scroll may have skipped:
+  // fade-in-on-view widgets sit at opacity:0 until an IntersectionObserver adds a
+  // class, and a quick programmatic scroll can miss the observer threshold —
+  // leaving product imagery invisible (and dropped by the capture).
+  const revealed: HTMLElement[] = [];
+  for (const el of Array.from(document.querySelectorAll<HTMLElement>('*'))) {
+    const cs = getComputedStyle(el);
+    if (parseFloat(cs.opacity) === 0 && /opacity|all/.test(cs.transitionProperty)) {
+      el.style.setProperty('opacity', '1', 'important');
+      revealed.push(el);
+    }
+  }
+
+  // 3) Let web fonts + freshly-triggered images settle before measuring.
+  try { await (document as { fonts?: { ready?: Promise<unknown> } }).fonts?.ready; } catch { /* ignore */ }
+  const pending = Array.from(document.images).filter(i => !i.complete);
+  await Promise.all(pending.map(img => new Promise<void>(res => {
+    img.addEventListener('load',  () => res(), { once: true });
+    img.addEventListener('error', () => res(), { once: true });
+    setTimeout(() => res(), 3000);
+  })));
+  await sleep(150);
+
+  return revealed;
 }
 
 // Screenshot every element flagged for rasterization, via the background worker.

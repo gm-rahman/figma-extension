@@ -98,7 +98,12 @@ page.on('console',   (m) => { if (m.type() === 'error') consoleErrors.push(m.tex
 page.on('pageerror', (e) => consoleErrors.push(String(e)));
 
 try {
-  await page.goto(target, { waitUntil: 'networkidle', timeout: 20000 });
+  // `networkidle` never settles on many marketing sites (analytics / long-poll),
+  // so we wait for the DOM + load event, then BEST-EFFORT for idle without failing.
+  // This makes captures deterministic instead of settling at a random load point.
+  await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await page.waitForLoadState('load', { timeout: 15000 }).catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
 } catch (err) {
   await browser.close();
   if (live && /ECONNREFUSED|net::ERR_CONNECTION_REFUSED/.test(String(err))) {
@@ -110,8 +115,45 @@ try {
   process.exit(1);
 }
 
-// Wait for web fonts to actually load before measuring — fixes text-width drift
+// Lazy-loaded images & below-the-fold sections only render once scrolled into
+// view. Step down the whole page, then return to top, so the capture is complete
+// and reproducible regardless of viewport.
+await page.evaluate(async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const step = Math.round(window.innerHeight * 0.8);
+  for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+    window.scrollTo(0, y);
+    await sleep(120);
+  }
+  window.scrollTo(0, 0);
+  await sleep(200);
+});
+
+// Force scroll-reveal content visible. Many sites fade elements in via an
+// IntersectionObserver-added class with an opacity transition; fast programmatic
+// scrolling can miss the observer threshold, leaving product imagery stuck at
+// opacity:0 (which the capture correctly treats as invisible and drops). Reveal
+// any element still transparent that is wired to transition its opacity.
+await page.evaluate(() => {
+  for (const el of document.querySelectorAll('*')) {
+    const cs = getComputedStyle(el);
+    if (parseFloat(cs.opacity) === 0 && /opacity|all/.test(cs.transitionProperty)) {
+      el.style.setProperty('opacity', '1', 'important');
+    }
+  }
+});
+
+// Wait for web fonts + any images triggered by the scroll to finish.
 await page.evaluate(() => (document.fonts && document.fonts.ready) || Promise.resolve());
+await page.evaluate(async () => {
+  const imgs = Array.from(document.images).filter((i) => !i.complete);
+  await Promise.all(imgs.map((i) => new Promise((res) => {
+    i.addEventListener('load', res, { once: true });
+    i.addEventListener('error', res, { once: true });
+    setTimeout(res, 3000);
+  })));
+});
+await page.waitForTimeout(500);
 
 await page.addScriptTag({ content: coreSource });
 

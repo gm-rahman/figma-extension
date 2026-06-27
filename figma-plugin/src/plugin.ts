@@ -29,6 +29,41 @@ figma.ui.onmessage = async (msg: UIToPlugin) => {
   }
 };
 
+// ── SVG image helpers ───────────────────────────────────────────────────────
+// figma.createImage decodes PNG/JPG/GIF only — NOT SVG. SVGs that arrive as an
+// image source (e.g. `background:url(glow.svg)`) must be rendered as native
+// vectors via createNodeFromSvg instead, or they fail and fall back to a flat box.
+
+function decodeUtf8(bytes: Uint8Array): string {
+  // Figma's plugin runtime may not expose TextDecoder; decode UTF-8 manually.
+  let out = '';
+  for (let i = 0; i < bytes.length;) {
+    const b = bytes[i++];
+    if (b < 0x80) out += String.fromCharCode(b);
+    else if (b < 0xe0) out += String.fromCharCode(((b & 0x1f) << 6) | (bytes[i++] & 0x3f));
+    else if (b < 0xf0) out += String.fromCharCode(((b & 0x0f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f));
+    else {
+      const cp = ((b & 0x07) << 18) | ((bytes[i++] & 0x3f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f);
+      const c = cp - 0x10000;
+      out += String.fromCharCode(0xd800 + (c >> 10), 0xdc00 + (c & 0x3ff));
+    }
+  }
+  return out;
+}
+
+// Returns SVG markup if the bytes are an SVG, else null. Raster magic numbers are
+// rejected up front so we never decode a large PNG/JPEG just to sniff it.
+function svgMarkupFromBytes(bytes: Uint8Array | undefined): string | null {
+  if (!bytes || bytes.length < 4) return null;
+  const [a, b, c] = bytes;
+  if (a === 0x89 && b === 0x50) return null;                 // PNG
+  if (a === 0xff && b === 0xd8) return null;                 // JPEG
+  if (a === 0x47 && b === 0x49 && c === 0x46) return null;   // GIF
+  if (a === 0x52 && b === 0x49 && c === 0x46) return null;   // RIFF (WEBP)
+  const text = decodeUtf8(bytes);
+  return /<svg[\s>]/i.test(text) ? text : null;
+}
+
 // ── Color helpers ─────────────────────────────────────────────────────────
 
 interface ParsedColor { color: RGB; opacity: number; }
@@ -487,8 +522,21 @@ async function buildNode(
       frame.clipsContent = shouldClip(capture);
 
       // Background image fill (embedded image via URL)
-      const bgUrl = capture.style.backgroundImageUrl;
-      if (bgUrl && imageBytes[bgUrl]) {
+      const bgUrl   = capture.style.backgroundImageUrl;
+      const bgSvg   = bgUrl ? svgMarkupFromBytes(imageBytes[bgUrl]) : null;
+      if (bgSvg) {
+        // SVG background → vector layer behind the frame's content (createImage
+        // can't decode SVG). Inserted as the first child so it paints underneath.
+        frame.fills = [];
+        try {
+          const svgBg = figma.createNodeFromSvg(bgSvg);
+          svgBg.name = 'bg-svg';
+          svgBg.resize(w, h);
+          frame.insertChild(0, svgBg);
+          svgBg.x = 0; svgBg.y = 0;
+          try { (svgBg as any).layoutPositioning = 'ABSOLUTE'; } catch {}
+        } catch { frame.fills = resolveFills(capture.style); }
+      } else if (bgUrl && imageBytes[bgUrl]) {
         try {
           const img = figma.createImage(imageBytes[bgUrl]);
           frame.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: 'FILL' }];
@@ -596,10 +644,15 @@ async function buildNode(
 
     case 'image': {
       // SVG → NATIVE Figma vector layers (editable shapes). Falls back to a frame
-      // if the markup fails to parse.
-      if (capture.svgMarkup) {
+      // if the markup fails to parse. This covers BOTH inline <svg> (svgMarkup) and
+      // SVG delivered as an image source (e.g. CSS background:url(glow.svg)), which
+      // figma.createImage can't decode.
+      const imgKey   = capture.src ?? capture.style.backgroundImageUrl;
+      const svgVector = capture.svgMarkup
+        ?? (imgKey ? svgMarkupFromBytes(imageBytes[imgKey]) : null);
+      if (svgVector) {
         try {
-          const svgNode = figma.createNodeFromSvg(capture.svgMarkup);
+          const svgNode = figma.createNodeFromSvg(svgVector);
           svgNode.name    = capture.name;
           svgNode.resize(w, h);
           svgNode.opacity = opacity;

@@ -281,6 +281,139 @@ function isCollapsibleControl(el: Element): boolean {
 // as just its first clause). We group rects by line and take the widest line.
 // textWidth drives single-line sizing + center offset, so it must be the true
 // rendered width or text clips / mis-centers.
+// ── Overflow-clip awareness ──────────────────────────────────────────────────
+// Pages clip content with overflow:hidden/clip/scroll/auto. The dominant case
+// that breaks naive text capture is the animated "odometer" counter: each digit
+// is a tall reel of 0-9 shown one-at-a-time through a one-digit-high clip window.
+// innerText / range rects see ALL the hidden digits, so we must respect the clip.
+
+const CLIP_TOL = 4;
+
+// Two glyph rects "coincide" when they overlap almost entirely — i.e. the same
+// character painted on top of itself (rolling-number duplicate). Distinct columns
+// in a number don't overlap horizontally, so they're never treated as duplicates.
+function rectsCoincide(a: DOMRect, b: DOMRect): boolean {
+  const ix = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+  const iy = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+  const inter = ix * iy;
+  const minArea = Math.min(a.width * a.height, b.width * b.height) || 1;
+  return inter / minArea > 0.6;
+}
+
+// True when a char/fragment rect's center lies outside the visible window.
+function isClipped(r: DOMRect | DOMRectReadOnly, win: DOMRect): boolean {
+  const cx = r.left + r.width / 2;
+  const cy = r.top  + r.height / 2;
+  return cx < win.left - CLIP_TOL || cx > win.right  + CLIP_TOL ||
+         cy < win.top  - CLIP_TOL || cy > win.bottom + CLIP_TOL;
+}
+
+// The visible window for text inside `start`: intersection of `stop`'s box with
+// every clipping ancestor between `start` and `stop` (inclusive). For an odometer
+// digit, `start` is the reel's text-node parent and the reel window narrows the
+// box to a single digit, so only the on-screen digit survives.
+function clipWindowFor(start: Element | null, stop: Element): DOMRect {
+  const base = stop.getBoundingClientRect();
+  let left = base.left, top = base.top, right = base.right, bottom = base.bottom;
+  let el: Element | null = start;
+  for (let guard = 0; el && guard < 50; guard++) {
+    const cs = window.getComputedStyle(el);
+    if ((cs.overflowX && cs.overflowX !== 'visible') || (cs.overflowY && cs.overflowY !== 'visible')) {
+      const b = el.getBoundingClientRect();
+      left = Math.max(left, b.left); top = Math.max(top, b.top);
+      right = Math.min(right, b.right); bottom = Math.min(bottom, b.bottom);
+    }
+    if (el === stop) break;
+    el = el.parentElement;
+  }
+  return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
+}
+
+// Cheap gate: does this element actually have overflow-clipped content somewhere
+// in its subtree? Only then do we pay for per-character window clipping. Text
+// nodes are usually small (leaf/inline), so the descendant scan is bounded.
+function hasClippedOverflow(el: Element): boolean {
+  const all = Array.from(el.querySelectorAll('*'));
+  for (const d of all) {
+    const cs = window.getComputedStyle(d);
+    const clips = (cs.overflowX && cs.overflowX !== 'visible') || (cs.overflowY && cs.overflowY !== 'visible');
+    if (clips && (d.scrollHeight > d.clientHeight + 2 || d.scrollWidth > d.clientWidth + 2)) return true;
+  }
+  return false;
+}
+
+// Walks visible text of a clipped element char-by-char, honouring each text node's
+// clip window. Drops off-screen reel digits; bakes hard '\n' at real wrap points.
+// Returns text + line count + widest line width in one pass.
+function measureClipped(el: Element, maxChars = 2000): { text: string; lines: number; textWidth: number } {
+  try {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    const range = document.createRange();
+    let out = '';
+    let count = 0;
+    let lineBottom: number | null = null;  // max bottom of the current visual line
+    let lineKey = 0;                        // lineBounds group key for the current line
+    let curParent: Element | null = null;
+    let win: DOMRect | null = null;
+    let prevRect: DOMRect | null = null;   // last kept glyph, for duplicate detection
+    const lineBounds = new Map<number, { left: number; right: number }>();
+    let tn: Node | null;
+    outer:
+    while ((tn = walker.nextNode())) {
+      const parent = (tn as Text).parentElement;
+      if (parent !== curParent) { curParent = parent; win = clipWindowFor(parent, el); }
+      const text = tn.nodeValue ?? '';
+      for (let i = 0; i < text.length; i++) {
+        if (count++ > maxChars) break outer;
+        const ch = text[i];
+        range.setStart(tn, i);
+        range.setEnd(tn, i + 1);
+        const r = range.getBoundingClientRect();
+        const empty = r.width === 0 && r.height === 0;
+        if (!empty && win && isClipped(r, win)) continue;
+        // Drop stacked duplicate glyphs (rolling-number widgets render the active
+        // digit twice, exactly overlapping). A real repeated digit sits in the next
+        // column (different x), so it won't coincide with the previous glyph.
+        if (!empty && prevRect && rectsCoincide(r, prevRect)) continue;
+        if (!empty) {
+          prevRect = r;
+          // Start a new visual line only when this glyph's vertical CENTER drops
+          // below the current line's bottom. Comparing centers (not raw `top`)
+          // keeps mixed font sizes that share a baseline — e.g. a big rolling
+          // number followed by a smaller label — on the same line.
+          const cy = r.top + r.height / 2;
+          if (lineBottom !== null && cy >= lineBottom) {
+            out = out.replace(/[ \t]+$/, '');
+            if (!out.endsWith('\n')) out += '\n';
+            lineKey = Math.round(r.top);
+            lineBottom = r.bottom;
+            if (ch === ' ' || ch === '\t') continue;
+          } else if (lineBottom === null) {
+            lineKey = Math.round(r.top);
+            lineBottom = r.bottom;
+          } else {
+            lineBottom = Math.max(lineBottom, r.bottom);
+          }
+          const b = lineBounds.get(lineKey);
+          if (b) { b.left = Math.min(b.left, r.left); b.right = Math.max(b.right, r.right); }
+          else   { lineBounds.set(lineKey, { left: r.left, right: r.right }); }
+        }
+        out += ch;
+      }
+    }
+    let maxW = 0;
+    for (const b of lineBounds.values()) maxW = Math.max(maxW, b.right - b.left);
+    return {
+      text: out.replace(/\n{2,}/g, '\n').trim(),
+      lines: Math.max(1, lineBounds.size),
+      textWidth: Math.ceil(maxW),
+    };
+  } catch {
+    const t = (el as HTMLElement).innerText?.trim() ?? '';
+    return { text: t, lines: 1, textWidth: 0 };
+  }
+}
+
 function measureText(el: Element): { lines: number; textWidth: number } {
   try {
     const range = document.createRange();
@@ -320,6 +453,9 @@ function getWrappedText(el: Element, maxChars = 2000): string {
   try {
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
     const range = document.createRange();
+    // Same clip box as measureText: skip characters overflowing the element's box
+    // (hidden odometer/marquee reel digits) so they aren't baked into the text.
+    const box = el.getBoundingClientRect();
     let out = '';
     let lastTop: number | null = null;
     let count = 0;
@@ -333,6 +469,7 @@ function getWrappedText(el: Element, maxChars = 2000): string {
         range.setEnd(tn, i + 1);
         const r = range.getBoundingClientRect();
         if (r.width === 0 && r.height === 0) { out += ch; continue; }
+        if (isClipped(r, box)) continue;
         const top = Math.round(r.top);
         if (lastTop !== null && top > lastTop + 3) {
           // New visual line — turn the wrapping whitespace into a hard break.
@@ -376,6 +513,16 @@ function isInlineTextContainer(el: Element, s: CSSStyleDeclaration): boolean {
   if (!(el as HTMLElement).innerText?.trim()) return false;
   const d = s.display;
   if (d === 'flex' || d === 'inline-flex' || d === 'grid' || d === 'inline-grid') return false;
+
+  // A widget (search bar, toolbar, form row) must never be flattened to a single
+  // text node: its fields are inputs/comboboxes whose visible text isn't in
+  // innerText, so flattening drops them entirely (a whole search box collapsing to
+  // just its "Search" button). Detect any interactive control in the subtree.
+  // Pure-text containers (paragraphs, animated number counters) have none and stay
+  // text. NOTE: keep this in sync with the controls collapsed in serializeElement.
+  if (el.querySelector(
+    'input, select, textarea, button, [role="combobox"], [role="listbox"], [role="option"], [contenteditable="true"]'
+  )) return false;
 
   for (const c of Array.from(el.children)) {
     const tag = c.tagName.toLowerCase();
@@ -569,7 +716,11 @@ function makeLeafTextChild(el: Element, rect: DOMRect, s: CSSStyleDeclaration): 
   const padL  = parseFloat(s.paddingLeft) || 0;
   const padR  = parseFloat(s.paddingRight) || 0;
   const lh    = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2 || 16;
-  const m     = measureText(el);
+  const clipped = hasClippedOverflow(el);
+  const m     = clipped ? measureClipped(el) : { ...measureText(el), text: '' };
+  const text  = clipped
+    ? (m as { text: string }).text
+    : (m.lines > 1 ? getWrappedText(el) : ((el as HTMLElement).innerText?.trim().slice(0, 1000) ?? ''));
   const textH = m.lines * lh;
   const style = stripBoxDecoration(getStyle(el));
   if (s.textAlign === 'start' || s.textAlign === 'left') style.textAlign = 'center';
@@ -583,7 +734,7 @@ function makeLeafTextChild(el: Element, rect: DOMRect, s: CSSStyleDeclaration): 
     width:  Math.round(Math.max(rect.width - padL - padR, 1)),
     height: Math.round(textH),
     style,
-    text: m.lines > 1 ? getWrappedText(el) : ((el as HTMLElement).innerText?.trim().slice(0, 1000) ?? ''),
+    text,
     lines: m.lines,
     textWidth: m.textWidth,
     children: [],
@@ -691,6 +842,37 @@ function attachPseudos(parentEl: Element, parentRect: DOMRect, node: CaptureNode
   if (after)  node.children.push(after);       // renders in front
 }
 
+// Appends an element's child nodes into `parentNode`, relative to (docX, docY).
+// Raw Text nodes between elements are preserved. Children with `display:contents`
+// generate no box of their own, so we recurse INTO them and hoist their children
+// up — otherwise the whole subtree (forms, fields, buttons) is silently dropped
+// by the size filter. This is a very common modern-framework wrapper pattern.
+function appendChildNodes(
+  parentNode: CaptureNode,
+  el: Element,
+  docX: number,
+  docY: number,
+  depth: number,
+): void {
+  const parentStyle = window.getComputedStyle(el);
+  const parentRect  = el.getBoundingClientRect();
+  for (const child of Array.from(el.childNodes)) {
+    if (capturedCount >= MAX_NODES) break;
+    if (child.nodeType === 1 /* ELEMENT */) {
+      const ce = child as Element;
+      if (window.getComputedStyle(ce).display === 'contents') {
+        appendChildNodes(parentNode, ce, docX, docY, depth);
+      } else {
+        const cn = serializeElement(ce, docX, docY, depth + 1);
+        if (cn) parentNode.children.push(cn);
+      }
+    } else if (child.nodeType === 3 /* TEXT */) {
+      const cn = makeTextNodeChild(child as Text, parentRect, parentStyle, docX, docY);
+      if (cn) parentNode.children.push(cn);
+    }
+  }
+}
+
 function serializeElement(
   el: Element,
   parentDocX: number,
@@ -711,9 +893,13 @@ function serializeElement(
   //  • Tiny in one axis BUT has a visible box (bg/border/radius) → KEEP
   //    (this covers 1px divider lines, decorative dots, etc.)
   //  • Tiny + no decoration → skip (whitespace, layout artifacts)
-  if (rect.width < 1 || rect.height < 1) return null;
+  // A collapsed (e.g. 0-height) box can still host absolutely-positioned children
+  // that paint outside it — decorative glow/spotlight layers, portals. Keep such a
+  // box as a pass-through frame (if it has element children) so they survive.
+  const hasKids = el.childElementCount > 0;
+  if ((rect.width < 1 || rect.height < 1) && !hasKids) return null;
   const tooSmall = rect.width < MIN_SIZE || rect.height < MIN_SIZE;
-  if (tooSmall && !hasVisibleBox(s)) return null;
+  if (tooSmall && !hasVisibleBox(s) && !hasKids) return null;
 
   capturedCount++;
   const type = classifyElement(el);
@@ -753,13 +939,19 @@ function serializeElement(
   }
 
   if (type === 'text') {
-    const m = measureText(el);
-    // Multi-line → bake in the exact wrap points so Figma won't re-flow the text.
-    node.text      = m.lines > 1
-      ? getWrappedText(el)
-      : ((el as HTMLElement).innerText?.trim().slice(0, 1000) ?? '');
-    node.lines     = m.lines;
-    node.textWidth = m.textWidth;
+    if (hasClippedOverflow(el)) {
+      // Clipped subtree (odometer/marquee/line-clamp): measure only visible text.
+      const m = measureClipped(el);
+      node.text = m.text; node.lines = m.lines; node.textWidth = m.textWidth;
+    } else {
+      const m = measureText(el);
+      // Multi-line → bake in the exact wrap points so Figma won't re-flow the text.
+      node.text      = m.lines > 1
+        ? getWrappedText(el)
+        : ((el as HTMLElement).innerText?.trim().slice(0, 1000) ?? '');
+      node.lines     = m.lines;
+      node.textWidth = m.textWidth;
+    }
   }
 
   if (type === 'image') {
@@ -806,25 +998,22 @@ function serializeElement(
       node.children.push(makeLeafTextChild(el, rect, s));
     } else {
       // Walk childNodes (not children) so raw Text nodes between elements survive —
-      // e.g. <button><span>G</span> Continue with Google</button>
-      for (const child of Array.from(el.childNodes)) {
-        if (capturedCount >= MAX_NODES) break;
-        if (child.nodeType === 1 /* ELEMENT */) {
-          const cn = serializeElement(child as Element, docX, docY, depth + 1);
-          if (cn) node.children.push(cn);
-        } else if (child.nodeType === 3 /* TEXT */) {
-          const cn = makeTextNodeChild(child as Text, rect, s, docX, docY);
-          if (cn) node.children.push(cn);
-        }
-      }
+      // e.g. <button><span>G</span> Continue with Google</button>. Children using
+      // `display:contents` are hoisted (they generate no box of their own).
+      appendChildNodes(node, el, docX, docY, depth);
       // Frame with no captured children but its own text → demote to text
       if (node.children.length === 0) {
         const txt = (el as HTMLElement).innerText?.trim().slice(0, 1000) ?? '';
         if (txt) {
-          const m = measureText(el);
           node.type = 'text';
-          node.text = m.lines > 1 ? getWrappedText(el) : txt;
-          node.lines = m.lines; node.textWidth = m.textWidth;
+          if (hasClippedOverflow(el)) {
+            const m = measureClipped(el);
+            node.text = m.text; node.lines = m.lines; node.textWidth = m.textWidth;
+          } else {
+            const m = measureText(el);
+            node.text = m.lines > 1 ? getWrappedText(el) : txt;
+            node.lines = m.lines; node.textWidth = m.textWidth;
+          }
         }
       }
     }
@@ -847,11 +1036,11 @@ export function buildPayload(root: Element, mode: CapturePayload['mode']): Captu
   const nodes: CaptureNode[] = [];
 
   if (mode === 'full-page') {
-    for (const child of Array.from(document.body.children)) {
-      if (capturedCount >= MAX_NODES) break;
-      const n = serializeElement(child, 0, 0);
-      if (n) nodes.push(n);
-    }
+    // Use the shared child walker so body-level `display:contents` wrappers
+    // (common app-root pattern) are hoisted instead of dropped.
+    const tmp: CaptureNode = { children: [] } as unknown as CaptureNode;
+    appendChildNodes(tmp, document.body, 0, 0, 0);
+    nodes.push(...tmp.children);
   } else {
     const rect = root.getBoundingClientRect();
     const n = serializeElement(root, rect.left + window.scrollX, rect.top + window.scrollY);

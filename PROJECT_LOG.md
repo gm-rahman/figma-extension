@@ -204,6 +204,86 @@ Detect Figma-impossible CSS → screenshot just that element as real browser pix
   `BACKGROUND_BLUR` requires `blurType: 'NORMAL'`, `applyCornerRadii` typed for
   Frame|Rectangle. Plugin is type-clean.
 
+### Session 2026-06-27 — Real-page hardening (tested against fresha.com)
+Drove the offline harness against a live, complex marketing page (Fresha) and
+fixed every structural capture bug it surfaced. Each was verified in `preview.html`
+(screenshotted via Playwright) before/after — no Figma round-trip.
+
+- **`display:contents` hoisting (biggest win).** `serializeElement` dropped any
+  element with `display:contents` because it has a 0×0 box — silently discarding
+  the ENTIRE subtree. On Fresha this nuked the whole hero search bar (collapsed to
+  the word "Search") and the nav pills. Fix: extracted child-walking into
+  `appendChildNodes()` which recurses INTO `display:contents` children and hoists
+  their children up. `buildPayload` uses it too (body-level app-root wrappers).
+- **Overflow-clip awareness (odometer counters).** Animated "rolling number"
+  widgets stack digits 0-9 in a tall reel clipped to one digit via `overflow:hidden`.
+  Capture ignored the clip and baked every hidden digit into one text node
+  (`0\n1\n2…`, 27 lines). Added `clipWindowFor()` (intersection of clipping
+  ancestors), `hasClippedOverflow()` gate, and `measureClipped()` which walks
+  visible text per-character honouring each text node's clip window. Also dedups
+  stacked-duplicate glyphs (`rectsCoincide`) — rolling-number libs render the active
+  digit twice. Result: `111,159 appointments booked today` instead of a number column.
+- **`isInlineTextContainer` widget guard.** A layout container whose fields are
+  form controls (whose text isn't in `innerText`) was flattened to a single text
+  node. Now refuses to flatten anything containing `input/select/textarea/button/
+  [role=combobox|listbox|option]`.
+- **Zero-size containers with children kept.** A collapsed (e.g. 0-height) box that
+  hosts absolutely-positioned children (decorative glow/spotlight layers) was
+  dropped by the size filter. Now kept as a pass-through frame when it has element
+  children. (Plugin already applies `backgroundImageUrl` as an IMAGE fill.)
+- **Harness reliability (was non-deterministic).** `networkidle` never settles on
+  analytics-heavy sites → frequent timeouts and inconsistent captures (1154 vs 2353
+  nodes between runs). Switched to `domcontentloaded` + best-effort idle, added
+  full-page auto-scroll (triggers lazy images / below-the-fold sections), image
+  settle wait, and a **force-reveal pass** that bumps `opacity:0` scroll-reveal
+  elements (fast programmatic scroll misses IntersectionObserver thresholds, which
+  otherwise drops product imagery — e.g. the app-section phone mockups). Two
+  back-to-back Fresha captures now produce identical structure, no timeouts.
+- **Preview renders CSS background-image** elements (`visual-diff.mjs`) so bg-image
+  divs (spotlight glow) show instead of an `image?` placeholder.
+- **Counter line-break fixed.** `measureClipped` now starts a new line only when a
+  glyph's vertical CENTER drops below the current line's bottom (was a raw `top`
+  jump), so a big rolling number + smaller trailing label stay on one line:
+  `216,457 appointments booked today`.
+- **Live capture now mirrors the harness.** Ported the auto-scroll + force-reveal +
+  font/image settle into the extension content script (`content.ts`
+  `prepareDomForCapture()`), run before a full-page capture and reverted afterwards
+  (scroll position + forced opacity restored). Real captures now include lazy
+  images and scroll-reveal product imagery (app-section phones/QR/map) that the
+  live extension previously dropped.
+
+Outcome: Fresha home page reproduces in the offline preview with the hero search
+bar, nav, rolling counter, all card carousels, app-download phones/QR/map, reviews,
+"1 billion+", business dashboard and footer — a night-and-day change from the
+initial broken import.
+
+### Session 2026-06-27 (cont.) — Image pipeline + SVG backgrounds
+Comparing the real Figma import (not just the preview) showed many elements as flat
+**lavender boxes** (`{r:.88,g:.88,b:.92}` — the plugin's missing-image fallback).
+Root-caused two separate issues via the data, no guessing:
+
+- **Image cap dropped 43 of 83 images.** `background.ts` embedded only the first
+  `MAX_IMAGES=40` URLs (DOM order), so everything later — trending photos,
+  `qr-code.png`, review avatars, the `forBusinessMedium` dashboard — got no bytes
+  and fell back to lavender. Raised the cap to **1000** and **hardened the pipeline**:
+  parallel fetching (`FETCH_CONCURRENCY=8`, was strictly sequential), a
+  `MAX_TOTAL_BYTES` budget to stay under the backend's 50 MB JSON limit, per-image
+  limit raised 2 MB → 12 MB, and **downscale of rasters above Figma's 4096px**
+  `createImage` ceiling (decode only files big enough to plausibly exceed it).
+- **SVG backgrounds can't be `createImage`d.** The hero glow is `spotlight*.svg`
+  (a `#FFD7FF` blob with a Gaussian-blur filter). `figma.createImage` decodes
+  PNG/JPG/GIF only (Figma docs), so it threw → lavender wash. Now `background.ts`
+  keeps SVG sources as raw markup (`data:image/svg+xml`), and `plugin.ts` sniffs
+  image bytes (`svgMarkupFromBytes`, rejecting raster magic numbers up front,
+  manual UTF-8 decode since the sandbox lacks `TextDecoder`) and renders them as
+  **native vectors** via `createNodeFromSvg` — Figma converts `feGaussianBlur` to a
+  layer-blur effect. Handled for both the type-image and frame-background paths.
+  Verified the full encode→decode→sniff chain byte-exact offline against the live
+  SVG; a PNG is correctly not misdetected.
+
+Decision log: SVG → vector (editable, on-brand) over rasterize; image pipeline →
+full harden over minimal. Plugin stays `tsc --noEmit` clean; extension builds clean.
+
 ---
 
 ## 4. Current status
@@ -230,6 +310,7 @@ Detect Figma-impossible CSS → screenshot just that element as real browser pix
 | Animations / transitions / video motion | Single-frame capture by design | Out of scope. |
 | Capture is viewport-width specific | Responsive pages lay out per width | Expected for any HTML→design tool; `--viewport` controls it. |
 | Browser zoom ≠ 100% may skew raster crop | DPR handled, zoom not | Capture at 100% zoom. |
+| Rotated/animated decorative layers (e.g. Fresha hero "spotlight" glow) may be mispositioned in the offline preview | Glow is a large rotated SVG bg on an absolutely-positioned layer inside a 0-height, rotation-animated ancestor chain; `visual-diff.mjs` can't place the rotated off-canvas layer well | Now captured (was dropped entirely) and the plugin renders it as an IMAGE fill; preview placement is approximate. |
 
 ---
 

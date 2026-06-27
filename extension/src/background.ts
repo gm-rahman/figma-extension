@@ -1,6 +1,9 @@
 const BACKEND_URL = 'http://localhost:3000';
-const MAX_IMAGES  = 40;
-const MAX_IMG_BYTES = 2_000_000; // 2 MB per image
+const MAX_IMAGES        = 1000;
+const MAX_IMG_BYTES     = 12_000_000;   // 12 MB per source image (raised from 2 MB)
+const MAX_TOTAL_BYTES   = 42_000_000;   // keep the whole payload under the backend's 50 MB JSON limit
+const FETCH_CONCURRENCY = 8;            // fetch images in parallel batches (was sequential)
+const MAX_IMAGE_DIM     = 4096;         // figma.createImage hard limit — downscale rasters above this
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('HTML to Figma extension installed.');
@@ -19,21 +22,61 @@ function collectImageUrls(nodes: any[]): Set<string> {
   return urls;
 }
 
-async function fetchImageAsDataUrl(url: string): Promise<string | null> {
+function isSvgSource(url: string, contentType: string): boolean {
+  return contentType === 'image/svg+xml' || /\.svg(\?|#|$)/i.test(url);
+}
+
+// Decode a raster, and if it exceeds Figma's 4096px limit (createImage throws
+// above it), downscale to fit. Small files skip the decode cost. SVGs never reach
+// here. Returns base64-encoded bytes + a mime type.
+async function normalizeRaster(buf: ArrayBuffer, mime: string): Promise<{ b64: string; mime: string }> {
+  const bytes = new Uint8Array(buf);
+  // Only pay the decode cost for files big enough to plausibly exceed 4096px.
+  if (buf.byteLength < 400_000 || typeof createImageBitmap === 'undefined') {
+    return { b64: bytesToBase64(bytes), mime };
+  }
   try {
-    const res = await fetch(url, { cache: 'force-cache' });
+    const bmp = await createImageBitmap(new Blob([buf], { type: mime }));
+    if (bmp.width <= MAX_IMAGE_DIM && bmp.height <= MAX_IMAGE_DIM) {
+      bmp.close();
+      return { b64: bytesToBase64(bytes), mime };
+    }
+    const scale  = MAX_IMAGE_DIM / Math.max(bmp.width, bmp.height);
+    const w      = Math.max(1, Math.round(bmp.width  * scale));
+    const h      = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = new OffscreenCanvas(w, h);
+    canvas.getContext('2d')!.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    const outBlob  = await canvas.convertToBlob({ type: 'image/png' });
+    const outBytes = new Uint8Array(await outBlob.arrayBuffer());
+    return { b64: bytesToBase64(outBytes), mime: 'image/png' };
+  } catch {
+    return { b64: bytesToBase64(bytes), mime };
+  }
+}
+
+// Fetch one image URL → a data URL (or null). SVG sources are kept as raw SVG
+// markup (data:image/svg+xml) so the plugin can render them as native vectors —
+// figma.createImage can't decode SVG. Returns the byte size for budget tracking.
+async function fetchOneImage(url: string, base: string | undefined):
+    Promise<{ key: string; dataUrl: string; bytes: number } | null> {
+  const resolved = resolveUrl(url, base);
+  if (!resolved) return null;
+  if (resolved.startsWith('data:')) return { key: url, dataUrl: resolved, bytes: resolved.length };
+  try {
+    const res = await fetch(resolved, { cache: 'force-cache' });
     if (!res.ok) return null;
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].toLowerCase();
     const buf = await res.arrayBuffer();
     if (buf.byteLength > MAX_IMG_BYTES) return null;
 
-    const bytes = new Uint8Array(buf);
-    let binary  = '';
-    const CHUNK = 8192;
-    for (let i = 0; i < bytes.length; i += CHUNK)
-      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-
-    const mimeType = res.headers.get('content-type') || 'image/jpeg';
-    return `data:${mimeType.split(';')[0]};base64,${btoa(binary)}`;
+    if (isSvgSource(resolved, contentType)) {
+      const dataUrl = `data:image/svg+xml;base64,${bytesToBase64(new Uint8Array(buf))}`;
+      return { key: url, dataUrl, bytes: dataUrl.length };
+    }
+    const { b64, mime } = await normalizeRaster(buf, contentType || 'image/jpeg');
+    const dataUrl = `data:${mime};base64,${b64}`;
+    return { key: url, dataUrl, bytes: dataUrl.length };
   } catch {
     return null;
   }
@@ -51,22 +94,28 @@ function resolveUrl(url: string, base: string | undefined): string | null {
 }
 
 async function embedImages(payload: any): Promise<any> {
-  const urls   = collectImageUrls(payload.nodes ?? []);
+  const urls   = [...collectImageUrls(payload.nodes ?? [])];
   // Preserve any images already on the payload (e.g. rasterized element PNGs).
   const images: Record<string, string> = { ...(payload.images ?? {}) };
-  let   count  = 0;
   const base   = payload.url as string | undefined;
 
-  for (const url of urls) {
-    if (count >= MAX_IMAGES) break;
-    const resolved = resolveUrl(url, base);
-    if (!resolved) continue;
-    // Pass data URLs through directly — no fetch needed.
-    if (resolved.startsWith('data:')) {
-      images[url] = resolved; count++; continue;
+  // Budget against the existing payload (rasterized PNGs already present).
+  let totalBytes = Object.values(images).reduce((n, v) => n + v.length, 0);
+  let count      = Object.keys(images).length;
+
+  // Fetch in parallel batches (was strictly sequential — far too slow at 1000).
+  for (let i = 0; i < urls.length && count < MAX_IMAGES; i += FETCH_CONCURRENCY) {
+    const batch   = urls.slice(i, i + FETCH_CONCURRENCY);
+    const results = await Promise.all(batch.map((u) => fetchOneImage(u, base)));
+    for (const r of results) {
+      if (!r || images[r.key]) continue;
+      if (count >= MAX_IMAGES) break;
+      // Stay under the backend's JSON size limit — skip rather than fail the POST.
+      if (totalBytes + r.bytes > MAX_TOTAL_BYTES) continue;
+      images[r.key] = r.dataUrl;
+      totalBytes   += r.bytes;
+      count++;
     }
-    const dataUrl = await fetchImageAsDataUrl(resolved);
-    if (dataUrl) { images[url] = dataUrl; count++; }
   }
 
   return { ...payload, images };

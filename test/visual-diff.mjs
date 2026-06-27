@@ -121,6 +121,14 @@ function renderNode(n) {
     return `<img src="${esc(n.src)}" style="${styleFromNode(n)};object-fit:contain" alt="${esc(n.name)}" data-name="${esc(n.name)}" />`;
   }
   if (n.type === 'image') {
+    // CSS background-image element (a div used as an image, e.g. spotlight glow):
+    // no <img>/<svg>, but the URL/gradient lives in the style. styleFromNode
+    // already emits background-image, so render the box directly (matches how the
+    // plugin applies it as an IMAGE fill).
+    const s = n.style || {};
+    if (s.backgroundImageUrl || (s.backgroundImage && s.backgroundImage !== 'none')) {
+      return `<div style="${styleFromNode(n)};background-size:cover;background-position:center;background-repeat:no-repeat" data-name="${esc(n.name)}"></div>`;
+    }
     // placeholder for missing image
     return `<div style="${styleFromNode(n)};background:repeating-linear-gradient(45deg,#eee,#eee 8px,#ddd 8px,#ddd 16px);display:flex;align-items:center;justify-content:center;color:#999;font:11px/1 sans-serif" data-name="${esc(n.name)}">image?</div>`;
   }
