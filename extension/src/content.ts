@@ -1,5 +1,5 @@
 import { CapturePayload, MessageToContent } from './types';
-import { buildPayload } from './capture-core';
+import { buildPayload, getRasterTargets } from './capture-core';
 
 let pickerActive = false;
 let highlightOverlay: HTMLElement | null = null;
@@ -64,6 +64,15 @@ async function captureAndSend(mode: 'full-page') {
 
   const payload = buildPayload(document.body, mode);
 
+  // Rasterize Figma-impossible elements: scroll each into view and ask the
+  // background worker to screenshot + crop it (content scripts can't call
+  // captureVisibleTab). Real browser pixels — guarantees fidelity.
+  const rasterImages = await rasterizeFlaggedElements();
+  if (Object.keys(rasterImages).length) {
+    payload.images = { ...(payload.images ?? {}), ...rasterImages };
+  }
+  cleanupRasterTags();
+
   window.scrollTo(savedX, savedY); // restore
 
   chrome.runtime.sendMessage({ type: 'SAVE_CAPTURE', payload }, (res) => {
@@ -74,6 +83,44 @@ async function captureAndSend(mode: 'full-page') {
       }).catch(() => {});
     }
   });
+}
+
+// Screenshot every element flagged for rasterization, via the background worker.
+async function rasterizeFlaggedElements(): Promise<Record<string, string>> {
+  const targets = getRasterTargets();
+  const images: Record<string, string> = {};
+  if (!targets.length) return images;
+
+  const dpr = window.devicePixelRatio || 1;
+  for (const t of targets) {
+    const el = document.querySelector(`[data-h2f-rid="${t.id}"]`) as HTMLElement | null;
+    if (!el) continue;
+
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 60)));
+
+    const r = el.getBoundingClientRect();
+    // Must be fully inside the viewport to capture in one shot.
+    if (r.width <= 0 || r.height <= 0) continue;
+    if (r.top < 0 || r.left < 0 || r.bottom > window.innerHeight || r.right > window.innerWidth) continue;
+
+    try {
+      const resp = await chrome.runtime.sendMessage({
+        type: 'CAPTURE_ELEMENT',
+        rect: { x: r.left, y: r.top, width: r.width, height: r.height },
+        dpr,
+      });
+      if (resp?.ok && resp.dataUrl) images[t.id] = resp.dataUrl;
+    } catch { /* skip this one */ }
+
+    // Respect Chrome's captureVisibleTab rate limit (~2/sec).
+    await new Promise<void>(r => setTimeout(r, 550));
+  }
+  return images;
+}
+
+function cleanupRasterTags(): void {
+  document.querySelectorAll('[data-h2f-rid]').forEach(el => el.removeAttribute('data-h2f-rid'));
 }
 
 // ── Message listener ───────────────────────────────────────────────────────

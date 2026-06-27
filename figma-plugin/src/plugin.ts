@@ -57,8 +57,8 @@ function parseCssColor(css: string): ParsedColor | null {
 
 // ── Gradient helpers ──────────────────────────────────────────────────────
 
-function parseGradientStops(css: string): GradientStop[] {
-  const stops: GradientStop[] = [];
+function parseGradientStops(css: string): ColorStop[] {
+  const stops: ColorStop[] = [];
   const pattern = /(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})(\s+[\d.]+%)?/g;
   let m: RegExpExecArray | null;
   const raw: Array<{color: string; pos?: number}> = [];
@@ -184,7 +184,10 @@ function applyTransform(
 // Apply CSS per-corner radius. If all four corners are equal we use the shorthand,
 // otherwise set each individually. CSS allows elliptical corners ("10px / 4px");
 // Figma supports only circular — we take the horizontal radius.
-function applyCornerRadii(frame: FrameNode, style: ElementStyle): void {
+// Accepts any node with corner-radius props (FrameNode, RectangleNode, ...).
+type CornerNode = Pick<RectangleNode,
+  'cornerRadius' | 'topLeftRadius' | 'topRightRadius' | 'bottomRightRadius' | 'bottomLeftRadius'>;
+function applyCornerRadii(frame: CornerNode, style: ElementStyle): void {
   const oneOf = (v: string) => parsePx((v || '').split('/')[0].trim());
   const tl = oneOf(style.borderTopLeftRadius);
   const tr = oneOf(style.borderTopRightRadius);
@@ -215,11 +218,14 @@ function parseBackdropBlur(css: string): Effect | null {
   if (!m) return null;
   const radius = parseFloat(m[1]);
   if (!Number.isFinite(radius) || radius <= 0) return null;
+  // `blurType: 'NORMAL'` is required by current Figma typings; older runtimes
+  // ignore the extra field. Cast keeps us compatible with both.
   return {
     type: 'BACKGROUND_BLUR',
+    blurType: 'NORMAL',
     radius,
     visible: true,
-  };
+  } as unknown as Effect;
 }
 
 // Split a top-level comma-separated CSS list, respecting nested parens
@@ -443,6 +449,31 @@ async function buildNode(
   const parentFrame = parent as FrameNode;
   const parentIsAutoLayout =
     typeof parentFrame.layoutMode === 'string' && parentFrame.layoutMode !== 'NONE';
+
+  // Rasterized element (Figma-impossible CSS) → render the captured PNG as an
+  // image fill. Takes precedence over the type switch; no children (the shot
+  // already contains the whole subtree).
+  if (capture.rasterize && capture.rasterId && imageBytes[capture.rasterId]) {
+    const rect = figma.createRectangle();
+    rect.name = `raster: ${capture.name}`;
+    rect.resize(w, h);
+    rect.opacity = opacity;
+    applyCornerRadii(rect, capture.style);
+    try {
+      const img = figma.createImage(imageBytes[capture.rasterId]);
+      rect.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: 'FILL' }];
+    } catch {
+      rect.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.92 } }];
+    }
+    parent.appendChild(rect);
+    if (parentIsAutoLayout) { try { rect.layoutPositioning = 'ABSOLUTE'; } catch {} }
+    // NOTE: no applyTransform here — the screenshot already has the element's
+    // transform/filter/clip baked into its pixels, and x/y/w/h is its rendered
+    // bounding box. Re-applying the transform would double it.
+    rect.x = x;
+    rect.y = y;
+    return;
+  }
 
   switch (capture.type) {
 

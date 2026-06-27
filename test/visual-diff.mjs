@@ -103,11 +103,16 @@ function sortByZIndex(children) {
 }
 
 function renderNode(n) {
-  // Rasterized element → render the captured PNG (real browser pixels).
+  // Rasterized element → render the captured PNG (real browser pixels). Use a
+  // MINIMAL style: the PNG already contains bg/gradient/filter/clip/transform, and
+  // transparent areas must NOT reveal the element's CSS background behind them.
   if (n.rasterize) {
+    const s = n.style || {};
+    const radius = (s.borderRadius && s.borderRadius !== '0px') ? `;border-radius:${s.borderRadius}` : '';
+    const minStyle = `position:absolute;left:${n.x}px;top:${n.y}px;width:${n.width}px;height:${n.height}px${radius}`;
     const src = n.rasterId && images[n.rasterId];
-    if (src) return `<img src="${src}" style="${styleFromNode(n)}" alt="${esc(n.name)}" data-name="${esc(n.name)} (raster)" title="${esc(n.name)} — ${esc(n.rasterReason || 'raster')}" />`;
-    return `<div style="${styleFromNode(n)};background:repeating-linear-gradient(45deg,#fdd,#fdd 8px,#fbb 8px,#fbb 16px);display:flex;align-items:center;justify-content:center;color:#900;font:11px/1 sans-serif" title="${esc(n.rasterReason||'')}">raster?</div>`;
+    if (src) return `<img src="${src}" style="${minStyle}" alt="${esc(n.name)}" data-name="${esc(n.name)} (raster)" title="${esc(n.name)} — ${esc(n.rasterReason || 'raster')}" />`;
+    return `<div style="${minStyle};background:repeating-linear-gradient(45deg,#fdd,#fdd 8px,#fbb 8px,#fbb 16px);display:flex;align-items:center;justify-content:center;color:#900;font:11px/1 sans-serif" title="${esc(n.rasterReason||'')}">raster?</div>`;
   }
   if (n.type === 'image' && n.svgMarkup) {
     return `<div style="${styleFromNode(n)}" data-name="${esc(n.name)}">${n.svgMarkup}</div>`;
