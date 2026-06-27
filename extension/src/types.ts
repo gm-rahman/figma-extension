@@ -102,7 +102,10 @@ export interface CapturePayload {
 export type MessageToContent =
   | { type: 'CAPTURE_FULL_PAGE' }
   | { type: 'START_ELEMENT_PICKER' }
-  | { type: 'CANCEL_PICKER' };
+  | { type: 'CANCEL_PICKER' }
+  | { type: 'CAPTURE_VIEWPORT'; label: string; width: number };
+
+export interface ViewportSpec { label: string; width: number; height: number; }
 
 // ── Capture progress (content → popup) ───────────────────────────────────────
 export type CapturePhase = 'preparing' | 'reading' | 'rasterizing' | 'saving';

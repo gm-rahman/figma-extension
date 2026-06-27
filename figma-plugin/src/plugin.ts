@@ -1,6 +1,6 @@
 /// <reference types="@figma/plugin-typings" />
 
-import { CaptureNode, CapturePayload, ElementStyle, FontSubstitution, UIToPlugin } from './types';
+import { CaptureNode, CapturePayload, ElementStyle, FontSubstitution, FrameImport, UIToPlugin } from './types';
 
 figma.showUI(__html__, { width: 320, height: 480, title: 'HTML to Figma' });
 
@@ -15,10 +15,28 @@ figma.ui.onmessage = async (msg: UIToPlugin) => {
       for (const [url, arr] of Object.entries(msg.imageMap ?? {})) {
         imageBytes[url] = new Uint8Array(arr);
       }
-      await buildFigmaNodes(msg.payload, imageBytes);
+      const wrapper = await buildFigmaNodes(msg.payload, imageBytes);
+      figma.viewport.scrollAndZoomIntoView([wrapper]);
       figma.ui.postMessage({
         type: 'IMPORT_DONE',
         name: msg.payload.title,
+        substitutions: fontSubstitutions.length ? [...fontSubstitutions] : undefined,
+      });
+    } catch (err) {
+      figma.ui.postMessage({ type: 'ERROR', message: String(err) });
+    } finally {
+      importing = false;
+    }
+  }
+
+  if (msg.type === 'CREATE_NODES_MULTI') {
+    if (importing) return;
+    importing = true;
+    try {
+      const name = await buildMultiViewport(msg.frames);
+      figma.ui.postMessage({
+        type: 'IMPORT_DONE',
+        name: `${msg.frames.length} viewports (${name})`,
         substitutions: fontSubstitutions.length ? [...fontSubstitutions] : undefined,
       });
     } catch (err) {
@@ -133,6 +151,22 @@ function linearGradientFill(css: string): GradientPaint | null {
   return { type: 'GRADIENT_LINEAR', gradientTransform, gradientStops: stops };
 }
 
+// Radial / conic / repeating gradients → Figma GRADIENT_RADIAL with a centered
+// transform. Not pixel-exact (CSS radial sizing/position is richer than Figma's),
+// but renders the real multi-stop gradient instead of a flat first-color block —
+// which is what produced the giant "pink rectangle" when a rasterized section
+// fell back to resolveFills (e.g. multi-viewport, where rasterization is skipped).
+function radialGradientFill(css: string): GradientPaint | null {
+  const stops = parseGradientStops(css);
+  if (stops.length < 2) return null;
+  // Centered ellipse covering the box: maps gradient space to the element centre.
+  const gradientTransform: [[number, number, number], [number, number, number]] = [
+    [0.5, 0, 0.25],
+    [0, 0.5, 0.25],
+  ];
+  return { type: 'GRADIENT_RADIAL', gradientTransform, gradientStops: stops };
+}
+
 function resolveFills(style: ElementStyle): Paint[] {
   const bg = style.backgroundImage;
 
@@ -142,10 +176,16 @@ function resolveFills(style: ElementStyle): Paint[] {
       const g = linearGradientFill(bg);
       if (g) return [g];
     }
-    const m = bg.match(/rgba?\([^)]+\)|#[0-9a-fA-F]{3,8}/);
-    if (m) {
-      const c = parseCssColor(m[0]);
-      if (c) return [{ type: 'SOLID', color: c.color, opacity: c.opacity }];
+    // radial / conic / repeating → native radial gradient (NOT a solid first-colour).
+    if (bg.includes('radial-gradient') || bg.includes('conic-gradient')) {
+      const g = radialGradientFill(bg);
+      if (g) return [g];
+    }
+    // Any other gradient form we don't model → still build a gradient from its
+    // stops rather than collapsing to one solid colour.
+    if (bg.includes('gradient')) {
+      const g = linearGradientFill(bg) || radialGradientFill(bg);
+      if (g) return [g];
     }
   }
 
@@ -698,27 +738,63 @@ async function buildNode(
 
 // ── Entry point ───────────────────────────────────────────────────────────
 
-async function buildFigmaNodes(payload: CapturePayload, imageBytes: Record<string, Uint8Array>) {
+async function buildFigmaNodes(
+  payload: CapturePayload,
+  imageBytes: Record<string, Uint8Array>,
+  originX = 0,
+  name?: string,
+): Promise<FrameNode> {
   const page = figma.currentPage;
   const { width: vw, height: vh } = payload.viewport;
   const first = payload.nodes[0];
 
-  const wrapperW = payload.mode === 'full-page' ? vw : Math.max(first?.width ?? vw, 1);
-  const wrapperH = payload.mode === 'full-page' ? vh : Math.max(first?.height ?? vh, 1);
+  const wrapperW = payload.mode === 'selected-element' ? Math.max(first?.width ?? vw, 1) : vw;
+  const wrapperH = payload.mode === 'selected-element' ? Math.max(first?.height ?? vh, 1) : vh;
 
   const wrapper = figma.createFrame();
-  wrapper.name         = payload.title || payload.url;
-  wrapper.resize(wrapperW, wrapperH);
+  wrapper.name         = name || payload.title || payload.url;
+  wrapper.resize(Math.max(wrapperW, 1), Math.max(wrapperH, 1));
+  wrapper.x            = originX;
+  wrapper.y            = 0;
   wrapper.fills        = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
-  wrapper.clipsContent = false;
+  wrapper.clipsContent = true; // clip overflow (carousels, wide images) like the real page
   page.appendChild(wrapper);
 
   await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
   await preloadFonts(payload.nodes);
 
-  // Top-level nodes have x/y relative to (0,0) — the wrapper origin
   for (const node of sortByZIndex(payload.nodes))
     await buildNode(node, wrapper, imageBytes);
 
-  figma.viewport.scrollAndZoomIntoView([wrapper]);
+  return wrapper;
+}
+
+// Multi-viewport: lay each frame out left→right with a label above it.
+async function buildMultiViewport(frames: FrameImport[]): Promise<string> {
+  const GAP = 120;
+  let originX = 0;
+  const built: SceneNode[] = [];
+  await figma.loadFontAsync({ family: 'Inter', style: 'Medium' });
+
+  for (const frame of frames) {
+    const imageBytes: Record<string, Uint8Array> = {};
+    for (const [url, arr] of Object.entries(frame.imageMap ?? {})) imageBytes[url] = new Uint8Array(arr);
+
+    const wrapper = await buildFigmaNodes(frame.payload, imageBytes, originX, `${frame.label} · ${frame.width}px`);
+
+    const label = figma.createText();
+    label.fontName = { family: 'Inter', style: 'Medium' };
+    label.characters = `${frame.label} — ${frame.width}px`;
+    label.fontSize = 18;
+    label.fills = [{ type: 'SOLID', color: { r: 0.6, g: 0.6, b: 0.65 } }];
+    label.x = originX;
+    label.y = -36;
+    figma.currentPage.appendChild(label);
+
+    built.push(wrapper, label);
+    originX += wrapper.width + GAP;
+  }
+
+  if (built.length) figma.viewport.scrollAndZoomIntoView(built);
+  return frames.map(f => f.label).join(', ');
 }

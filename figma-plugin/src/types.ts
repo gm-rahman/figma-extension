@@ -109,8 +109,17 @@ export interface CaptureSummary {
   mode: string;
 }
 
+/** One viewport's render in a multi-viewport import. */
+export interface FrameImport {
+  label: string;
+  width: number;
+  payload: CapturePayload;
+  imageMap?: Record<string, number[]>;
+}
+
 export type UIToPlugin =
-  | { type: 'CREATE_NODES'; payload: CapturePayload; imageMap?: Record<string, number[]> };
+  | { type: 'CREATE_NODES'; payload: CapturePayload; imageMap?: Record<string, number[]> }
+  | { type: 'CREATE_NODES_MULTI'; frames: FrameImport[] };
 
 export interface FontSubstitution {
   /** What the page asked for, e.g. "Geist Sans SemiBold" */

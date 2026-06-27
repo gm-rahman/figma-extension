@@ -350,6 +350,64 @@ is exempt (escapes clipping). Applied right after the size filter in
   page's visible carousel. Not over-clipped.
 Result: capture matches what's actually visible; no off-canvas bloat in Figma.
 
+### Session 2026-06-27 (cont.) — Multi-viewport + UI redesign + refresh fix
+Large feature pass (5 parts):
+1. **Capture fix:** `<picture>` now collapses to its inner `<img>` (image type, via
+   `resolveImgSrc(querySelector('img'))`) — removes the redundant wrapper frame.
+   Confirmed dashboard/map/avatars are captured + embedded (data audit); prior
+   "missing" was stale builds + preview hotlink (already fixed).
+2. **Multi-viewport capture (new):** popup lets user pick Desktop 1440 / Laptop 1024
+   / Tablet 768 / Mobile 402. `background.ts captureMulti()` attaches `chrome.debugger`,
+   `Emulation.setDeviceMetricsOverride` per width, asks content (`CAPTURE_VIEWPORT`)
+   to build a payload for that layout, embeds images, and POSTs one combined
+   `{mode:'multi-viewport', frames:[{label,width,...payload}]}`. Added `debugger`
+   permission. Rasterization skipped during emulation (avoids nested messaging).
+   Plugin `buildMultiViewport()` lays frames left→right with labels; `buildFigmaNodes`
+   refactored to take originX + return the wrapper (now `clipsContent:true`).
+3. **UI redesign:** both popup.html and figma-plugin/ui.html rebuilt — premium dark
+   theme (#1c1c1e surfaces, gradient logo, rounded cards, accent #7c5cfc), device
+   checklist with custom ticks, status pills.
+4. **Refresh fix:** plugin Refresh now re-fetches `/captures` with `cache:'no-store'`
+   and re-renders + status (`fetchList`); import paths also `no-store`. Multi-capture
+   docs show a "multi" badge in the list.
+5. Strict types throughout (`ViewportSpec`, `FrameImport`, `CAPTURE_VIEWPORT`,
+   `CAPTURE_MULTI`). Extension + plugin build clean; plugin `tsc` clean (bar the
+   pre-existing DOMRectList lib-config noise). Fixture regression: 0 problems.
+
+Note: multi-viewport is debugger-based (extension only) — not exercisable by the
+offline harness. Test in Chrome: pick viewports → Capture Selected → Import.
+
+### Session 2026-06-27 (cont.) — Pink-block bug + multi-viewport rasterization
+Imported multi-viewport result showed a giant solid **pink rectangle** over the
+"1 billion+" band + blank phone/avatars. Root-caused from capture.json (no assume):
+- **Pink block = unhandled radial gradient.** `FreshaInNumbers` is
+  `radial-gradient(circle, rgb(239,105,177) …)` (that's the pink). It's rasterized
+  in single-capture, but **multi-viewport skipped rasterization**, so the plugin
+  fell back to `resolveFills`, which only handled `linear-gradient` → grabbed the
+  first colour → SOLID PINK 1440×660.
+- **Fix 1 (plugin, root):** added `radialGradientFill()` + routed radial / conic /
+  repeating / any-other gradient to a native `GRADIENT_RADIAL` (centered transform)
+  instead of a solid first-colour. No more flat colour blocks; helps single AND
+  multi. (Not pixel-exact for CSS radial sizing, but a real gradient.)
+- **Fix 2 (extension):** re-enabled rasterization inside `CAPTURE_VIEWPORT` so each
+  emulated viewport also captures videos / clip-path / conic (fixes blank phone).
+  Nested CAPTURE_ELEMENT↔background messaging works fine during debugger emulation.
+Both build clean; plugin tsc clean (bar DOMRectList noise).
+
+### Session 2026-06-27 (cont.) — Card image radius + heart icon
+Data from capture.json (card structure): `<img>` has `radius:0` but its wrapper
+`LocationCard` has `radius:16px; overflow:hidden` (it rounds the image via clip);
+the favourite heart is a 32×32 absolutely-positioned `<button>` whose glyph is a
+`::before` (CSS mask icon).
+- **Image radius inheritance:** when an image's own radius is 0, walk up to 3
+  clipping ancestors of the same box size and copy their `border-radius` onto the
+  image node — so the image renders rounded regardless of frame-clip behaviour.
+  Verified: card img now `borderRadius:"16px"`.
+- **Mask-icon rasterization:** `rasterizeReason` now flags small (≤56px) elements
+  whose `::before`/`::after` uses `mask-image`/`-webkit-mask-image` (Figma can't do
+  CSS masks) → screenshots the glyph (covers the heart when it's a mask icon).
+  Pseudo probe gated to ≤56px to avoid page-wide cost.
+
 ### Session 2026-06-27 (cont.) — `<video>` capture + missing-imagery audit
 User marked up a fresha.com capture flagging missing app-section phone + business
 dashboard. Audited with the harness (data, not guessing):

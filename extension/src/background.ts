@@ -180,9 +180,92 @@ async function captureElement(tab: chrome.tabs.Tab, rect: any, dpr: number): Pro
   return cropDataUrl(full, rect, dpr);
 }
 
+// ── Multi-viewport capture (via chrome.debugger device emulation) ─────────────
+
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+function dbgSend(tabId: number, method: string, params: object): Promise<any> {
+  return new Promise((resolve, reject) => {
+    chrome.debugger.sendCommand({ tabId }, method, params, (r) => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message)); else resolve(r);
+    });
+  });
+}
+function dbgAttach(tabId: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.debugger.attach({ tabId }, '1.3', () => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message)); else resolve();
+    });
+  });
+}
+function dbgDetach(tabId: number): Promise<void> {
+  return new Promise((resolve) => chrome.debugger.detach({ tabId }, () => resolve()));
+}
+
+function progress(message: string) {
+  chrome.runtime.sendMessage({ type: 'CAPTURE_PROGRESS', phase: 'preparing', message }).catch(() => {});
+}
+
+// Emulate each selected width, ask the content script to build a payload for that
+// layout, embed its images, and POST one combined multi-frame capture.
+async function captureMulti(tabId: number, windowId: number, viewports: Array<{ label: string; width: number; height: number }>) {
+  await dbgAttach(tabId);
+  const frames: any[] = [];
+  try {
+    for (const vp of viewports) {
+      progress(`Emulating ${vp.label} (${vp.width}px)…`);
+      await dbgSend(tabId, 'Emulation.setDeviceMetricsOverride', {
+        width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.width <= 768,
+        screenWidth: vp.width, screenHeight: vp.height,
+      });
+      await sleep(450); // let the responsive layout settle
+
+      const resp: any = await chrome.tabs.sendMessage(tabId, { type: 'CAPTURE_VIEWPORT', label: vp.label, width: vp.width });
+      if (!resp?.ok || !resp.payload) continue;
+
+      progress(`Fetching images for ${vp.label}…`);
+      const enriched = await embedImages(resp.payload);
+      frames.push({ label: vp.label, width: vp.width, ...enriched });
+    }
+  } finally {
+    try { await dbgSend(tabId, 'Emulation.clearDeviceMetricsOverride', {}); } catch { /* ignore */ }
+    await dbgDetach(tabId);
+  }
+  if (!frames.length) throw new Error('No viewports captured');
+
+  const doc = {
+    title: frames[0].title, url: frames[0].url, mode: 'multi-viewport', frames,
+  };
+  const res = await fetch(`${BACKEND_URL}/capture`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc),
+  });
+  if (!res.ok) throw new Error(`Backend ${res.status}`);
+  return (await res.json()).id as string;
+}
+
 // ── Message handler ────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+
+  if (msg.type === 'CAPTURE_MULTI') {
+    (async () => {
+      try {
+        const tab = sender.tab || (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+        if (!tab?.id) throw new Error('no tab');
+        const id = await captureMulti(tab.id, tab.windowId!, msg.viewports);
+        await chrome.storage.local.set({ lastCapture: { id, status: 'done', timestamp: Date.now() } });
+        chrome.runtime.sendMessage({ type: 'CAPTURE_DONE', id }).catch(() => {});
+        sendResponse({ ok: true, id });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Multi-capture failed';
+        chrome.runtime.sendMessage({ type: 'CAPTURE_ERROR', message }).catch(() => {});
+        sendResponse({ ok: false, message });
+      }
+    })();
+    return true;
+  }
 
   if (msg.type === 'CAPTURE_ELEMENT') {
     (async () => {

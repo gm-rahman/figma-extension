@@ -1,166 +1,108 @@
-import { MessageFromContent } from './types';
+import { MessageFromContent, ViewportSpec } from './types';
 
 const BACKEND_URL = 'http://localhost:3000';
 
-const btnFullPage = document.getElementById('btn-full-page') as HTMLButtonElement;
-const btnSelectEl  = document.getElementById('btn-select-element') as HTMLButtonElement;
-const statusEl     = document.getElementById('status') as HTMLDivElement;
+const DEVICES: ViewportSpec[] = [
+  { label: 'Desktop', width: 1440, height: 900 },
+  { label: 'Laptop',  width: 1024, height: 768 },
+  { label: 'Tablet',  width: 768,  height: 1024 },
+  { label: 'Mobile',  width: 402,  height: 874 },
+];
+
+const devicesEl = document.getElementById('devices') as HTMLDivElement;
+const btnCapture = document.getElementById('btn-capture') as HTMLButtonElement;
+const btnSelect  = document.getElementById('btn-select-element') as HTMLButtonElement;
+const statusEl   = document.getElementById('status') as HTMLDivElement;
+
+const TICK = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+// Render device rows; Desktop selected by default.
+const selected = new Set<string>(['Desktop']);
+for (const d of DEVICES) {
+  const row = document.createElement('label');
+  row.className = 'device' + (selected.has(d.label) ? ' checked' : '');
+  row.innerHTML =
+    `<span class="tick">${TICK}</span><span class="name">${d.label}</span><span class="w">${d.width}px</span>`;
+  row.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (selected.has(d.label)) selected.delete(d.label); else selected.add(d.label);
+    row.classList.toggle('checked', selected.has(d.label));
+  });
+  devicesEl.appendChild(row);
+}
 
 let captureTimeout: ReturnType<typeof setTimeout> | null = null;
-
 function setStatus(message: string, type: 'loading' | 'success' | 'error') {
-  statusEl.textContent = message;
-  statusEl.className = `status ${type}`;
+  statusEl.textContent = message; statusEl.className = `status ${type}`;
 }
-
-function clearStatus() {
-  statusEl.className = 'status';
-  statusEl.textContent = '';
-}
-
-function setLoading(loading: boolean) {
-  btnFullPage.disabled = loading;
-  btnSelectEl.disabled  = loading;
-}
-
-// Lazy-load scrolling + rasterization can take a while on large pages, so the
-// timeout is generous and is RESET on every progress message — it only fires if
-// the capture genuinely stalls.
-function startCaptureTimeout() {
+function setLoading(loading: boolean) { btnCapture.disabled = loading; btnSelect.disabled = loading; }
+function startTimeout() {
   if (captureTimeout) clearTimeout(captureTimeout);
-  captureTimeout = setTimeout(() => {
-    setLoading(false);
-    setStatus('Timed out. Refresh the page and try again.', 'error');
-  }, 60_000);
+  captureTimeout = setTimeout(() => { setLoading(false); setStatus('Timed out. Try again.', 'error'); }, 90_000);
 }
-
-function clearCaptureTimeout() {
-  if (captureTimeout) { clearTimeout(captureTimeout); captureTimeout = null; }
-}
+function clearTimeoutNow() { if (captureTimeout) { clearTimeout(captureTimeout); captureTimeout = null; } }
 
 async function checkBackend(): Promise<boolean> {
-  try { await fetch(`${BACKEND_URL}/captures`); return true; }
-  catch { return false; }
+  try { await fetch(`${BACKEND_URL}/captures`); return true; } catch { return false; }
 }
-
-async function getActiveTab(): Promise<chrome.tabs.Tab | null> {
+async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab ?? null;
 }
-
-function isRestrictedUrl(url?: string): boolean {
+function isRestricted(url?: string): boolean {
   if (!url) return true;
-  return url.startsWith('chrome://') ||
-    url.startsWith('chrome-extension://') ||
-    url.startsWith('edge://') ||
-    url.startsWith('about:') ||
-    url.startsWith('data:');
+  return ['chrome://', 'chrome-extension://', 'edge://', 'about:', 'data:'].some(p => url.startsWith(p));
 }
-
-async function sendToTab(tabId: number, msg: object): Promise<boolean> {
-  try {
-    await chrome.tabs.sendMessage(tabId, msg);
-    return true;
-  } catch {
-    // Content script not yet injected — inject it now (works on http/https/localhost/file://)
-    try {
-      await chrome.scripting.executeScript({ target: { tabId }, files: ['dist/content.js'] });
-      await new Promise(r => setTimeout(r, 50)); // allow script to initialize
-      await chrome.tabs.sendMessage(tabId, msg);
-      return true;
-    } catch {
-      return false;
-    }
+async function ensureContent(tabId: number): Promise<void> {
+  try { await chrome.tabs.sendMessage(tabId, { type: 'PING' }); }
+  catch {
+    try { await chrome.scripting.executeScript({ target: { tabId }, files: ['dist/content.js'] }); await new Promise(r => setTimeout(r, 60)); } catch { /* ignore */ }
   }
 }
 
-// Listen for results from the content script (strictly typed union).
 chrome.runtime.onMessage.addListener((msg: MessageFromContent) => {
-  if (msg.type === 'CAPTURE_PROGRESS') {
-    setStatus(msg.message, 'loading');
-    startCaptureTimeout(); // reset — progress means the capture is still alive
-    return;
-  }
-  if (msg.type === 'CAPTURE_DONE') {
-    clearCaptureTimeout();
-    setLoading(false);
-    setStatus('Captured! Open the Figma plugin to import.', 'success');
-    return;
-  }
-  if (msg.type === 'CAPTURE_ERROR') {
-    clearCaptureTimeout();
-    setLoading(false);
-    setStatus(msg.message ?? 'Something went wrong.', 'error');
-  }
+  if (msg.type === 'CAPTURE_PROGRESS') { setStatus(msg.message, 'loading'); startTimeout(); return; }
+  if (msg.type === 'CAPTURE_DONE')     { clearTimeoutNow(); setLoading(false); setStatus('Captured! Open the Figma plugin to import.', 'success'); return; }
+  if (msg.type === 'CAPTURE_ERROR')    { clearTimeoutNow(); setLoading(false); setStatus(msg.message ?? 'Something went wrong.', 'error'); }
 });
 
-btnFullPage.addEventListener('click', async () => {
-  clearStatus();
+btnCapture.addEventListener('click', async () => {
+  const viewports = DEVICES.filter(d => selected.has(d.label));
+  if (!viewports.length) { setStatus('Select at least one viewport.', 'error'); return; }
+
   setLoading(true);
   setStatus('Checking backend…', 'loading');
-
-  const alive = await checkBackend();
-  if (!alive) {
-    setLoading(false);
-    setStatus('Backend not running. Run: cd backend && npm run dev', 'error');
-    return;
-  }
+  if (!(await checkBackend())) { setLoading(false); setStatus('Backend not running. Run: cd backend && npm run dev', 'error'); return; }
 
   const tab = await getActiveTab();
   if (!tab?.id) { setLoading(false); return; }
+  if (isRestricted(tab.url)) { setLoading(false); setStatus('Cannot capture browser system pages.', 'error'); return; }
 
-  if (isRestrictedUrl(tab.url)) {
-    setLoading(false);
-    setStatus('Cannot capture browser system pages. Navigate to a website first.', 'error');
-    return;
-  }
+  await ensureContent(tab.id);
+  setStatus(`Capturing ${viewports.length} viewport${viewports.length > 1 ? 's' : ''}…`, 'loading');
+  startTimeout();
 
-  setStatus('Capturing page…', 'loading');
-  startCaptureTimeout();
-
-  const ok = await sendToTab(tab.id, { type: 'CAPTURE_FULL_PAGE' });
-  if (!ok) {
-    clearCaptureTimeout();
-    setLoading(false);
-    setStatus('Could not inject into page. For local files, enable "Allow access to file URLs" in extension settings.', 'error');
-  }
-});
-
-btnSelectEl.addEventListener('click', async () => {
-  clearStatus();
-  setLoading(true);
-  setStatus('Checking backend…', 'loading');
-
-  const alive = await checkBackend();
-  if (!alive) {
-    setLoading(false);
-    setStatus('Backend not running. Run: cd backend && npm run dev', 'error');
-    return;
-  }
-
-  const tab = await getActiveTab();
-  if (!tab?.id) { setLoading(false); return; }
-
-  const ok = await sendToTab(tab.id, { type: 'START_ELEMENT_PICKER' });
-  if (!ok) {
-    setLoading(false);
-    setStatus('Could not reach the page. Refresh the page and try again.', 'error');
-    return;
-  }
-
-  window.close();
-});
-
-// Check for a pending result from the element picker (popup was closed during capture)
-async function checkStoredResult() {
-  const result = await chrome.storage.local.get('lastCapture');
-  if (result.lastCapture?.status === 'done') {
-    const age = Date.now() - result.lastCapture.timestamp;
-    if (age < 30_000) {
-      setStatus('Captured! Open the Figma plugin to import.', 'success');
+  chrome.runtime.sendMessage({ type: 'CAPTURE_MULTI', viewports }, (res) => {
+    if (chrome.runtime.lastError || !res?.ok) {
+      clearTimeoutNow(); setLoading(false);
+      setStatus(res?.message ?? chrome.runtime.lastError?.message ?? 'Capture failed.', 'error');
     }
+  });
+});
+
+btnSelect.addEventListener('click', async () => {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+  await ensureContent(tab.id);
+  try { await chrome.tabs.sendMessage(tab.id, { type: 'START_ELEMENT_PICKER' }); window.close(); }
+  catch { setStatus('Could not reach the page. Refresh and retry.', 'error'); }
+});
+
+// Restore a result if the popup was reopened after an element-picker capture.
+(async () => {
+  const r = await chrome.storage.local.get('lastCapture');
+  if (r.lastCapture?.status === 'done' && Date.now() - r.lastCapture.timestamp < 30_000) {
+    setStatus('Captured! Open the Figma plugin to import.', 'success');
     await chrome.storage.local.remove('lastCapture');
   }
-}
-
-checkStoredResult();
+})();

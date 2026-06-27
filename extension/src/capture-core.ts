@@ -277,6 +277,20 @@ function rasterizeReason(el: Element, s: CSSStyleDeclaration): string {
 
   if (/matrix3d\(|perspective\(/.test(s.transform || '')) return '3D transform';
 
+  // Small elements often draw an icon via a CSS mask-image on ::before/::after
+  // (e.g. a favourite heart). Figma can't reproduce a CSS mask, so rasterize the
+  // whole little control. Gated to ≤56px so we don't probe pseudo styles page-wide.
+  const r = el.getBoundingClientRect();
+  if (r.width > 0 && r.width <= 56 && r.height <= 56) {
+    for (const pe of ['::before', '::after']) {
+      let ps: CSSStyleDeclaration;
+      try { ps = window.getComputedStyle(el, pe); } catch { continue; }
+      if (ps.content === 'none') continue;
+      const mask = ps.maskImage || (ps as any).webkitMaskImage;
+      if (mask && mask !== 'none') return `${pe} mask icon`;
+    }
+  }
+
   return '';
 }
 
@@ -590,6 +604,7 @@ function classifyElement(el: Element): CaptureNode['type'] {
   const tag = el.tagName.toLowerCase();
   if (tag === 'img') return 'image';
   if (tag === 'video') return 'image';   // captured via its poster frame
+  if (tag === 'picture') return 'image';  // collapse to its inner <img> (no wrapper frame)
   if (tag === 'svg' || el.closest('svg')) return 'image';
 
   const s = window.getComputedStyle(el);
@@ -1012,9 +1027,35 @@ function serializeElement(
   }
 
   if (type === 'image') {
+    // Inherit rounded corners from a clipping ancestor. Cards round the IMAGE via
+    // a wrapper (border-radius + overflow:hidden) while the <img> itself has
+    // radius:0. Copy that radius onto the image node so it renders rounded even
+    // independent of frame clipping.
+    if (parseFloat(node.style.borderRadius) === 0) {
+      let a = el.parentElement; let depth = 0;
+      while (a && depth < 3) {
+        const as = window.getComputedStyle(a);
+        const r = parseFloat(as.borderTopLeftRadius) || 0;
+        const clips = as.overflowX !== 'visible' || as.overflowY !== 'visible';
+        const ar = a.getBoundingClientRect();
+        const sameBox = Math.abs(ar.width - rect.width) < 6 && Math.abs(ar.height - rect.height) < 6;
+        if (clips && r > 0 && sameBox) {
+          node.style.borderRadius            = as.borderRadius;
+          node.style.borderTopLeftRadius     = as.borderTopLeftRadius;
+          node.style.borderTopRightRadius    = as.borderTopRightRadius;
+          node.style.borderBottomRightRadius = as.borderBottomRightRadius;
+          node.style.borderBottomLeftRadius  = as.borderBottomLeftRadius;
+          break;
+        }
+        a = a.parentElement; depth++;
+      }
+    }
     const tag = el.tagName.toLowerCase();
     if (tag === 'img') {
       node.src = resolveImgSrc(el as HTMLImageElement);
+    } else if (tag === 'picture') {
+      const img = el.querySelector('img');
+      node.src = img ? resolveImgSrc(img as HTMLImageElement) : undefined;
     } else if (tag === 'video') {
       // <video> can't render in Figma — use its poster frame (the static image
       // shown before playback). Falls back to the element's background.

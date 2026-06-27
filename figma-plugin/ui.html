@@ -3,108 +3,75 @@
   <head>
     <meta charset="UTF-8" />
     <style>
+      :root {
+        --bg: #1c1c1e;
+        --surface: #262629;
+        --surface-hover: #2f2f33;
+        --border: #343438;
+        --text: #ececf1;
+        --muted: #8a8a92;
+        --accent: #7c5cfc;
+        --accent-hover: #8f72ff;
+        --ok: #46d39a;
+        --err: #ff6b6b;
+      }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-
       body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        font-size: 12px;
-        background: #1e1e1e;
-        color: #e0e0e0;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+        font-size: 12px; background: var(--bg); color: var(--text);
+        display: flex; flex-direction: column; height: 100vh;
+        -webkit-font-smoothing: antialiased;
       }
-
       header {
-        padding: 12px 14px 10px;
-        border-bottom: 1px solid #333;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        display: flex; align-items: center; gap: 9px;
+        padding: 13px 15px; border-bottom: 1px solid var(--border);
       }
-
-      header h1 { font-size: 13px; font-weight: 600; color: #fff; }
-
-      .toolbar {
-        padding: 10px 14px;
-        display: flex;
-        gap: 8px;
-        border-bottom: 1px solid #2a2a2a;
+      .logo {
+        width: 22px; height: 22px; border-radius: 6px;
+        background: linear-gradient(135deg, var(--accent), #00d4ff);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 12px; color: #fff;
       }
-
+      header h1 { font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
+      .toolbar { padding: 11px 15px; display: flex; gap: 8px; border-bottom: 1px solid #2a2a2d; }
       .btn {
-        padding: 7px 12px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 500;
-        transition: background 0.1s;
+        padding: 8px 12px; border: none; border-radius: 8px; cursor: pointer;
+        font-size: 12px; font-weight: 600; transition: background .12s, opacity .12s;
       }
-
-      .btn-primary { background: #7c5cfc; color: #fff; flex: 1; }
-      .btn-primary:hover { background: #6b4de0; }
-      .btn-ghost { background: #2c2c2c; color: #ccc; }
-      .btn-ghost:hover { background: #383838; }
-      .btn-import { background: #2c2c2c; color: #a0a0ff; padding: 5px 10px; font-size: 11px; }
-      .btn-import:hover { background: #383838; }
-
-      #capture-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 8px 14px;
-      }
-
+      .btn-primary { background: var(--accent); color: #fff; flex: 1; }
+      .btn-primary:hover { background: var(--accent-hover); }
+      .btn-ghost { background: var(--surface); color: var(--text); font-weight: 550; }
+      .btn-ghost:hover { background: var(--surface-hover); }
+      .btn-import { background: var(--accent); color: #fff; padding: 6px 12px; font-size: 11px; border-radius: 7px; }
+      .btn-import:hover { background: var(--accent-hover); }
+      #capture-list { flex: 1; overflow-y: auto; padding: 10px 15px; }
       .card {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 9px 10px;
-        border-radius: 6px;
-        background: #252525;
-        margin-bottom: 6px;
-        gap: 8px;
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        padding: 11px 12px; border-radius: 10px; background: var(--surface);
+        margin-bottom: 8px; border: 1px solid transparent; transition: background .12s, border-color .12s;
       }
-
-      .card:hover { background: #2c2c2c; }
-
-      .card-info {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        overflow: hidden;
+      .card:hover { background: var(--surface-hover); border-color: var(--border); }
+      .card-info { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+      .card-title { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .card-meta { font-size: 10.5px; color: var(--muted); }
+      .badge {
+        display: inline-block; font-size: 9.5px; font-weight: 600; color: #b9a8ff;
+        background: #2a2740; border-radius: 5px; padding: 1px 6px; margin-left: 6px;
       }
-
-      .card-title {
-        font-size: 12px;
-        font-weight: 500;
-        color: #e0e0e0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .card-meta { font-size: 10px; color: #666; }
-
-      .empty { color: #555; font-size: 12px; text-align: center; margin-top: 40px; }
-
+      .empty { color: #5a5a60; font-size: 12px; text-align: center; margin-top: 56px; line-height: 1.6; }
       .status {
-        padding: 8px 14px;
-        font-size: 11px;
-        min-height: 32px;
-        display: flex;
-        align-items: center;
-        border-top: 1px solid #2a2a2a;
+        padding: 10px 15px; font-size: 11px; min-height: 36px; white-space: pre-line;
+        display: flex; align-items: center; border-top: 1px solid #2a2a2d;
       }
-
-      .status.loading { color: #9090f0; }
-      .status.success { color: #4caf82; }
-      .status.error   { color: #f07070; }
-      .status.idle    { color: transparent; }
+      .status.loading { color: #b9a8ff; }
+      .status.success { color: var(--ok); }
+      .status.error   { color: var(--err); }
+      .status.idle    { color: var(--muted); }
     </style>
   </head>
   <body>
     <header>
+      <div class="logo">F</div>
       <h1>HTML to Figma</h1>
     </header>
 
@@ -114,12 +81,8 @@
     </div>
 
     <div id="capture-list"></div>
+    <div class="status idle" id="status">Ready.</div>
 
-    <div class="status idle" id="status"></div>
-
-    <script>
-      // ui.ts compiled inline by tsc
-    </script>
     <script src="dist/ui.js"></script>
   </body>
 </html>

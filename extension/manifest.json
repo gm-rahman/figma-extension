@@ -3,7 +3,7 @@
   "name": "HTML to Figma",
   "version": "1.0.0",
   "description": "Capture any webpage and import it into Figma",
-  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "scripting", "storage", "tabs", "debugger"],
   "host_permissions": [
     "<all_urls>",
     "file:///*"

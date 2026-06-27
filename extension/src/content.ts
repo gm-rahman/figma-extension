@@ -191,7 +191,8 @@ function cleanupRasterTags(): void {
 
 // ── Message listener ───────────────────────────────────────────────────────
 
-chrome.runtime.onMessage.addListener((msg: MessageToContent, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg: MessageToContent | { type: 'PING' }, _sender, sendResponse) => {
+  if (msg.type === 'PING') { sendResponse({ ok: true }); return; }
   if (msg.type === 'CAPTURE_FULL_PAGE') {
     captureAndSend('full-page').catch((err) => {
       chrome.runtime.sendMessage({
@@ -203,6 +204,36 @@ chrome.runtime.onMessage.addListener((msg: MessageToContent, _sender, sendRespon
   }
   if (msg.type === 'START_ELEMENT_PICKER') { startPicker(); sendResponse({ ok: true }); }
   if (msg.type === 'CANCEL_PICKER')        { stopPicker();  sendResponse({ ok: true }); }
+
+  // Multi-viewport: the background worker has already emulated the target width
+  // (via chrome.debugger). Build a payload for the CURRENT (emulated) layout and
+  // return it; the worker fetches images + combines frames. Rasterization is
+  // skipped here to avoid nested messaging during emulation.
+  if (msg.type === 'CAPTURE_VIEWPORT') {
+    (async () => {
+      try {
+        const savedX = window.scrollX, savedY = window.scrollY;
+        progress('preparing', `Capturing ${msg.label} (${msg.width}px)…`);
+        const revealed = await prepareDomForCapture();
+        window.scrollTo(0, 0);
+        await new Promise(r => setTimeout(r, 80));
+        const payload = buildPayload(document.body, 'full-page');
+        // Rasterize this viewport's Figma-impossible elements (video, clip-path,
+        // conic, etc.) too — the emulated viewport is what captureVisibleTab grabs.
+        const rasterImages = await rasterizeFlaggedElements();
+        if (Object.keys(rasterImages).length) {
+          payload.images = { ...(payload.images ?? {}), ...rasterImages };
+        }
+        cleanupRasterTags();
+        for (const el of revealed) el.style.removeProperty('opacity');
+        window.scrollTo(savedX, savedY);
+        sendResponse({ ok: true, payload });
+      } catch (err) {
+        sendResponse({ ok: false, message: err instanceof Error ? err.message : 'capture failed' });
+      }
+    })();
+    return true; // async
+  }
 });
 
 // keep type import referenced
