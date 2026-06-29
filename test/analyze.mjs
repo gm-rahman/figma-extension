@@ -121,7 +121,11 @@ function printNode(node, depth, parent) {
       notes.push(`"${node.name}" renders "${ch}" as text in a ${node.width}×${node.height} box — if the source used an <svg>, it'd import as a real icon.`);
     }
   } else if (node.type === 'image') {
-    if (node.tagName === 'svg') {
+    if (node.rasterize) {
+      // Rasterized elements carry their PNG in the images map keyed by rasterId,
+      // not via src/bgUrl — not a missing image.
+      extra = ` RASTER ${node.rasterReason || ''}`;
+    } else if (node.tagName === 'svg') {
       counts.svg++;
       if (node.svgMarkup) {
         counts.svgWithMarkup++;

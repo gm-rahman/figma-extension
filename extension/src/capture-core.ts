@@ -227,7 +227,11 @@ function getControlText(el: Element): { text: string; color: string } | null {
 // data-* lazy attributes, then the src attribute.
 function resolveImgSrc(img: HTMLImageElement): string | undefined {
   const live = img.currentSrc || img.src;
-  if (live && !live.startsWith('data:image/gif')) return live;   // ignore 1px gif placeholders
+  // Use the live src UNLESS it's a tiny 1×1 GIF tracking/placeholder (short data-URI);
+  // real animated GIFs are large data-URIs or URLs and must pass through (Figma
+  // renders animated GIF image fills natively).
+  const isTinyPlaceholder = !!live && live.startsWith('data:image/gif') && live.length < 256;
+  if (live && !isTinyPlaceholder) return live;
 
   const pickSrcset = (ss: string | null) => {
     if (!ss) return undefined;

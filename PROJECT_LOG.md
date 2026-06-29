@@ -408,6 +408,71 @@ the favourite heart is a 32×32 absolutely-positioned `<button>` whose glyph is 
   CSS masks) → screenshots the glyph (covers the heart when it's a mask icon).
   Pseudo probe gated to ≤56px to avoid page-wide cost.
 
+### Session 2026-06-27 (cont.) — Debug pass / "not all CSS captured"
+Ran a full debug pass against fresha.com @1440 (data, not assumption):
+- **Result: capture is clean.** 76 SVGs (all markup), 22 images (all src), 5
+  gradients, 2 rasters (video phone + FreshaInNumbers), 0 real PROBLEMS. Colors,
+  per-corner radius, shadows, layout/flex/grid, transforms, backdrop-filter,
+  z-order all captured.
+- **Fixed analyzer false-positive:** rasterized image nodes (e.g. the app `<video>`)
+  were wrongly flagged "IMG-NO-SRC → grey placeholder". They carry their PNG in the
+  images map by `rasterId` (verified `raster-node-445` present). Analyzer now skips
+  rasterized nodes → PROBLEMS 0.
+- **The real (only) delta = custom font `RoobertPRO ×200`.** Fresha's whole site
+  uses RoobertPRO, which Figma doesn't ship, so text falls back to Inter (reported
+  via the plugin's substitution diagnostic). This is Gap #4 (font embedding): Figma
+  plugin API CANNOT install fonts. Exact text requires the user to install
+  RoobertPRO in Figma, then re-import. Baked line-breaks already keep layout intact
+  despite the substitution.
+- Minor not-yet-captured CSS (low impact, future): text-decoration (underline),
+  font-style italic, outline/focus rings, text-transform edge cases.
+
+### Session 2026-06-27 (cont.) — GIF support + scoping video/animation
+**Previous:** capture fidelity is now high (radius, gradients, pseudo, carousel
+clip, multi-viewport, images embedded). Remaining user asks: GIF capture, video→GIF,
+CSS animation, a stray "p" on carousel arrows.
+**Present (done this turn):**
+- **GIF images:** Figma's `createImage` renders animated GIF fills natively, and our
+  pipeline already captures `img.src` → fetch → embed → `createImage` (the SVG sniff
+  in `svgMarkupFromBytes` correctly passes GIFs through to `createImage`). Hardened
+  `resolveImgSrc`: it previously dropped *all* `data:image/gif` URIs; now it only
+  skips the tiny 1×1 placeholder (`<256` chars), so real animated data-URI GIFs flow
+  through. So **GIF attachments now import as animated image fills**.
+**Future (scoped, NOT built — heavy, deferred for token budget):**
+- **Video → animated GIF:** needs in-browser frame capture + GIF encoding
+  (`gif.js`/`ffmpeg.wasm`); cross-origin `<video>` taints canvas so frames must come
+  via `captureVisibleTab` sampling over time. Today video = poster/rasterized single
+  frame. ~1–2 days.
+- **CSS animation → Figma (Weave/Smart Animate):** capture `@keyframes`/`transition`
+  and emit Figma motion. Large; needs the Weave/animation plugin API. Scoped only.
+- **Carousel arrow stray "p":** a glyph on the nav arrow (likely a pseudo/icon-font
+  char). Needs that element's computed data to fix precisely — deferred.
+Build: extension clean.
+
+### Session 2026-06-30 — Multi-viewport duplicate-frame bug
+**Bug:** importing produced multiple identical "Desktop · 1440px" frames with the
+same content. **Root cause (traced, not assumed):** `buildFigmaNodes` sizes each
+wrapper from `payload.viewport.width`. The `chrome.debugger`
+`Emulation.setDeviceMetricsOverride` re-evaluates CSS media queries but does NOT
+fire a `resize` event, so JS-responsive components (and effectively the captured
+layout) stayed at 1440 for every selected viewport → N identical 1440 frames, and
+nothing detected the no-op.
+**Fixes:**
+- `content.ts CAPTURE_VIEWPORT`: dispatch `window.resize` after emulation (+150ms)
+  so JS-driven responsive logic runs; then set `payload.viewport = { width:
+  innerWidth, height: scrollHeight }` so the frame reflects the REAL emulated width.
+- `background.ts captureMulti`: read each frame's actual `viewport.width`; **dedup
+  by width** — if a width was already captured (emulation didn't change the layout),
+  skip it with a "layout unchanged" progress note instead of emitting a duplicate
+  frame. Frame width now = measured width (was the requested constant).
+- Settle bumped 450→550ms.
+Net: distinct viewports → distinct frames; failed emulation → a single frame + a
+clear diagnostic, never silent duplicates.
+**GIF (prev turn):** `resolveImgSrc` no longer drops real data-URI GIFs (only the
+1×1 placeholder); animated GIFs import as native Figma image fills.
+**Future:** video→animated-GIF encoding; CSS animation → Figma Weave; carousel-arrow
+stray glyph (needs that element's computed data).
+
 ### Session 2026-06-27 (cont.) — `<video>` capture + missing-imagery audit
 User marked up a fresha.com capture flagging missing app-section phone + business
 dashboard. Audited with the harness (data, not guessing):

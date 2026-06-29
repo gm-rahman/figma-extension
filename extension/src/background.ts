@@ -213,6 +213,7 @@ function progress(message: string) {
 async function captureMulti(tabId: number, windowId: number, viewports: Array<{ label: string; width: number; height: number }>) {
   await dbgAttach(tabId);
   const frames: any[] = [];
+  const seenWidths = new Set<number>();
   try {
     for (const vp of viewports) {
       progress(`Emulating ${vp.label} (${vp.width}px)…`);
@@ -220,14 +221,24 @@ async function captureMulti(tabId: number, windowId: number, viewports: Array<{ 
         width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: vp.width <= 768,
         screenWidth: vp.width, screenHeight: vp.height,
       });
-      await sleep(450); // let the responsive layout settle
+      await sleep(550); // let the responsive layout settle
 
       const resp: any = await chrome.tabs.sendMessage(tabId, { type: 'CAPTURE_VIEWPORT', label: vp.label, width: vp.width });
       if (!resp?.ok || !resp.payload) continue;
 
+      // Actual emulated layout width (from window.innerWidth in the content script).
+      const actualW = Math.round(resp.payload.viewport?.width || vp.width);
+      // If emulation didn't change the layout (a width we've already captured),
+      // skip — otherwise we'd produce multiple identical frames.
+      if (seenWidths.has(actualW)) {
+        progress(`Skipped ${vp.label}: layout unchanged (${actualW}px)`);
+        continue;
+      }
+      seenWidths.add(actualW);
+
       progress(`Fetching images for ${vp.label}…`);
       const enriched = await embedImages(resp.payload);
-      frames.push({ label: vp.label, width: vp.width, ...enriched });
+      frames.push({ label: vp.label, width: actualW, ...enriched });
     }
   } finally {
     try { await dbgSend(tabId, 'Emulation.clearDeviceMetricsOverride', {}); } catch { /* ignore */ }

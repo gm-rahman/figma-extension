@@ -214,10 +214,20 @@ chrome.runtime.onMessage.addListener((msg: MessageToContent | { type: 'PING' }, 
       try {
         const savedX = window.scrollX, savedY = window.scrollY;
         progress('preparing', `Capturing ${msg.label} (${msg.width}px)…`);
+        // Nudge JS-driven responsive components (resize listeners) — device-metrics
+        // emulation re-evaluates CSS media queries but does NOT fire a resize event.
+        window.dispatchEvent(new Event('resize'));
+        await new Promise(r => setTimeout(r, 150));
         const revealed = await prepareDomForCapture();
         window.scrollTo(0, 0);
         await new Promise(r => setTimeout(r, 80));
         const payload = buildPayload(document.body, 'full-page');
+        // Record the ACTUAL emulated layout width so the frame matches reality and
+        // the background can detect when emulation didn't take effect.
+        payload.viewport = {
+          width: window.innerWidth,
+          height: document.documentElement.scrollHeight,
+        };
         // Rasterize this viewport's Figma-impossible elements (video, clip-path,
         // conic, etc.) too — the emulated viewport is what captureVisibleTab grabs.
         const rasterImages = await rasterizeFlaggedElements();
