@@ -427,6 +427,21 @@ Ran a full debug pass against fresha.com @1440 (data, not assumption):
 - Minor not-yet-captured CSS (low impact, future): text-decoration (underline),
   font-style italic, outline/focus rings, text-transform edge cases.
 
+### Session 2026-06-27 (cont.) — Google Sheets → data table
+Google Sheets renders its grid on a `<canvas>` (cell text not in the DOM), so a
+normal capture only screenshots it. Wired up the dormant `fetchSheetCsv` path:
+- New `extension/src/sheet-table.ts`: `isGoogleSheet()`, `sheetIdAndGid()`,
+  RFC-4180 `parseCsv()` (quoted commas/quotes/newlines), and `buildSheetPayload()`
+  → a real Figma table (frame→rows→cells→text), header row bold + tinted, column
+  widths from longest value. Verified offline (quoted-comma + multiline cells OK).
+- `content.ts trySheetCapture()`: on a `docs.google.com/spreadsheets/` URL, fetch
+  CSV via the existing `FETCH_SHEET_CSV` background handler (gviz/export endpoint),
+  parse, and send the table payload — wired into both `captureAndSend` and the
+  multi-viewport `CAPTURE_VIEWPORT` path (dedup collapses identical frames).
+- Limitations (documented): values only — cell colours/merges/borders are
+  canvas-rendered and absent from CSV; private sheets whose CSV needs auth fall
+  back to the normal screenshot. Sheets-only (Docs/Slides/Maps stay screenshot).
+
 ### Session 2026-06-27 (cont.) — GIF support + scoping video/animation
 **Previous:** capture fidelity is now high (radius, gradients, pseudo, carousel
 clip, multi-viewport, images embedded). Remaining user asks: GIF capture, video→GIF,

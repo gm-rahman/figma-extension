@@ -1,5 +1,6 @@
 import { CapturePayload, CapturePhase, CaptureProgressMessage, MessageToContent } from './types';
 import { buildPayload, getRasterTargets } from './capture-core';
+import { isGoogleSheet, sheetIdAndGid, parseCsv, buildSheetPayload } from './sheet-table';
 
 let pickerActive = false;
 let highlightOverlay: HTMLElement | null = null;
@@ -63,9 +64,44 @@ function progress(phase: CapturePhase, message: string, current?: number, total?
   chrome.runtime.sendMessage(msg).catch(() => {});
 }
 
+// Google Sheets/Docs are canvas-rendered (no DOM text). For Sheets we instead
+// fetch the sheet as CSV and build a real Figma table. Returns null when the page
+// isn't a Sheet or the CSV can't be fetched (private sheet → falls back to normal
+// capture, i.e. a screenshot of the canvas).
+async function trySheetCapture(): Promise<CapturePayload | null> {
+  if (!isGoogleSheet()) return null;
+  const ids = sheetIdAndGid(location.href);
+  if (!ids) return null;
+  progress('reading', 'Fetching Google Sheet data…');
+  try {
+    const resp: any = await chrome.runtime.sendMessage({
+      type: 'FETCH_SHEET_CSV', spreadsheetId: ids.id, gid: ids.gid,
+    });
+    if (!resp?.ok || !resp.csv) return null;
+    const rows = parseCsv(resp.csv);
+    if (!rows.length) return null;
+    return buildSheetPayload(rows, location.href, document.title);
+  } catch { return null; }
+}
+
 async function captureAndSend(mode: 'full-page') {
   const savedX = window.scrollX;
   const savedY = window.scrollY;
+
+  // Google Sheet → data-as-table (no DOM to capture from the canvas grid).
+  const sheet = await trySheetCapture();
+  if (sheet) {
+    progress('saving', 'Saving sheet…');
+    chrome.runtime.sendMessage({ type: 'SAVE_CAPTURE', payload: sheet }, (res) => {
+      if (chrome.runtime.lastError || !res?.ok) {
+        chrome.runtime.sendMessage({
+          type: 'CAPTURE_ERROR',
+          message: res?.message ?? 'Failed to save sheet',
+        }).catch(() => {});
+      }
+    });
+    return;
+  }
 
   // Prime the page so a full-page capture matches what the user sees after
   // scrolling: trigger lazy-loaded images, below-the-fold sections, and
@@ -212,6 +248,10 @@ chrome.runtime.onMessage.addListener((msg: MessageToContent | { type: 'PING' }, 
   if (msg.type === 'CAPTURE_VIEWPORT') {
     (async () => {
       try {
+        // Google Sheet → same data table for every viewport (dedup collapses them).
+        const sheet = await trySheetCapture();
+        if (sheet) { sendResponse({ ok: true, payload: sheet }); return; }
+
         const savedX = window.scrollX, savedY = window.scrollY;
         progress('preparing', `Capturing ${msg.label} (${msg.width}px)…`);
         // Nudge JS-driven responsive components (resize listeners) — device-metrics
