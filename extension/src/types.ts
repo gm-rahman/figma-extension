@@ -58,6 +58,9 @@ export interface ElementStyle {
   /** CSS z-index ('auto' or numeric string). Drives child paint order so decorative
    *  pseudos with negative z-index render BEHIND content like the original page. */
   zIndex: string;
+  /** CSS filter on the element. blur()/drop-shadow() → Figma LAYER_BLUR/DROP_SHADOW;
+   *  other functions (hue-rotate, contrast…) trigger rasterization instead. */
+  filter: string;
 }
 
 export interface CaptureNode {

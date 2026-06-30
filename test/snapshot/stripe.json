@@ -4,7 +4,7 @@
   "mode": "full-page",
   "viewport": {
     "width": 1280,
-    "height": 1193
+    "height": 1279
   },
   "nodes": [
     {
@@ -15,7 +15,7 @@
       "x": 0,
       "y": 0,
       "width": 1280,
-      "height": 1193,
+      "height": 1279,
       "style": {
         "backgroundColor": "rgba(0, 0, 0, 0)",
         "backgroundImage": "none",
@@ -63,8 +63,9 @@
         "overflowY": "visible",
         "backdropFilter": "none",
         "transform": "none",
-        "transformOrigin": "640px 596.5px",
-        "zIndex": "auto"
+        "transformOrigin": "640px 639.5px",
+        "zIndex": "auto",
+        "filter": "none"
       },
       "children": [
         {
@@ -75,7 +76,7 @@
           "x": 0,
           "y": 0,
           "width": 800,
-          "height": 1193,
+          "height": 1279,
           "style": {
             "backgroundColor": "rgba(0, 0, 0, 0)",
             "backgroundImage": "linear-gradient(135deg, rgb(99, 91, 255) 0%, rgb(0, 212, 255) 50%, rgb(0, 184, 148) 100%)",
@@ -123,12 +124,13 @@
             "overflowY": "hidden",
             "backdropFilter": "none",
             "transform": "none",
-            "transformOrigin": "400px 596.5px",
-            "zIndex": "auto"
+            "transformOrigin": "400px 639.5px",
+            "zIndex": "auto",
+            "filter": "none"
           },
           "children": [
             {
-              "id": "node-41",
+              "id": "node-48",
               "tagName": "#before",
               "type": "frame",
               "name": "::before",
@@ -185,7 +187,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "150px 150px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": []
             },
@@ -246,7 +249,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "344px 15.5px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
@@ -306,7 +310,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "95.2891px 15.5px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
@@ -366,7 +371,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "14px 14px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "svgMarkup": "<svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n            <circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#fff\"/>\n            <path d=\"M8 12l3 3 5-6\" stroke=\"#635bff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n          </svg>"
@@ -428,7 +434,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "77.2891px 15.5px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "text": "Aetherbrand",
@@ -494,7 +501,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "21.4062px 8px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Sign in",
@@ -560,7 +568,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "344px 7.5px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [],
               "text": "START YOUR ACCOUNT",
@@ -624,7 +633,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "240px 128px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [],
               "text": "Financial\ninfrastructure\nto grow your\nbusiness.",
@@ -688,7 +698,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "230px 42px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [],
               "text": "Create a Stripe account and start accepting payments,\nmanaging subscriptions, and building financial workflows\nin minutes.",
@@ -752,7 +763,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "235px 63px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
@@ -812,7 +824,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "113.5px 63px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
@@ -872,7 +885,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "95.5px 9px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [
                         {
@@ -932,7 +946,8 @@
                             "backdropFilter": "none",
                             "transform": "none",
                             "transformOrigin": "30.3516px 7px",
-                            "zIndex": "auto"
+                            "zIndex": "auto",
+                            "filter": "none"
                           },
                           "children": [],
                           "text": "Net volume",
@@ -996,7 +1011,8 @@
                             "backdropFilter": "none",
                             "transform": "none",
                             "transformOrigin": "9px 9px",
-                            "zIndex": "auto"
+                            "zIndex": "auto",
+                            "filter": "none"
                           },
                           "children": [],
                           "svgMarkup": "<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n              <path d=\"M3 17l6-6 4 4 8-8\" stroke=\"#7be0a3\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n              <path d=\"M14 7h7v7\" stroke=\"#7be0a3\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n            </svg>"
@@ -1060,7 +1076,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "95.5px 16px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "text": "$128,490",
@@ -1124,7 +1141,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "95.5px 7px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "text": "+18.4%",
@@ -1190,7 +1208,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "113.5px 63px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
@@ -1250,7 +1269,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "95.5px 7px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "text": "Payments",
@@ -1314,7 +1334,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "25.7891px 9px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAUCAYAAACr3w7oAAAAU0lEQVR4nGNgGAWjYBSMglEwCkbBKBgFo2AUjIJRMArIBP///2dgYGD4DyL///8nU2/oA0YGBoZ/IAYTFAyAYRGgOdiAEAMDw98BBKNgFIyCUTAKRsEoGAUDDgABwgD3K7P0dQAAAABJRU5ErkJggg=="
@@ -1376,7 +1397,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "95.5px 16px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "text": "8,214",
@@ -1440,7 +1462,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "95.5px 7px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "text": "99.98% uptime",
@@ -1508,7 +1531,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "344px 13.5px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
@@ -1568,7 +1592,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "86.2656px 13.5px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
@@ -1628,7 +1653,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "86.2656px 13.5px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "text": "Global payment methods",
                       "lines": 1,
@@ -1694,7 +1720,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "54.1094px 13.5px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
@@ -1754,7 +1781,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "54.1094px 13.5px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "text": "No setup fees",
                       "lines": 1,
@@ -1820,7 +1848,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "71.8125px 13.5px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
@@ -1880,7 +1909,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "71.8125px 13.5px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "text": "Bank-grade security",
                       "lines": 1,
@@ -1948,7 +1978,8 @@
                 "backdropFilter": "blur(20px) saturate(1.8)",
                 "transform": "none",
                 "transformOrigin": "344px 25px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
@@ -2008,7 +2039,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "344px 25px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "text": "Trusted by millions of businesses across 195+ countries.",
                   "lines": 1,
@@ -2075,7 +2107,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "344px 40px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": []
             },
@@ -2136,7 +2169,8 @@
                 "backdropFilter": "none",
                 "transform": "matrix(0.999391, -0.0348995, 0.0348995, 0.999391, 0, 0)",
                 "transformOrigin": "344px 24px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
@@ -2196,7 +2230,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "10px 10px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "svgMarkup": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n          <circle cx=\"12\" cy=\"12\" r=\"10\" stroke=\"rgb(26, 31, 54)\" stroke-width=\"2\"/>\n          <path d=\"M12 8v4M12 16h.01\" stroke=\"rgb(26, 31, 54)\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n        </svg>"
@@ -2258,7 +2293,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "205.445px 9px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Rotated card with per-corner radius and layered shadows.",
@@ -2274,6 +2310,453 @@
               "name": "Container",
               "x": 56,
               "y": 1073,
+              "width": 688,
+              "height": 50,
+              "style": {
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "backgroundImage": "none",
+                "color": "rgb(255, 255, 255)",
+                "fontSize": "16px",
+                "fontFamily": "Arial, Helvetica, sans-serif",
+                "fontWeight": "400",
+                "textAlign": "start",
+                "lineHeight": "normal",
+                "letterSpacing": "normal",
+                "borderRadius": "0px",
+                "borderTopLeftRadius": "0px",
+                "borderTopRightRadius": "0px",
+                "borderBottomRightRadius": "0px",
+                "borderBottomLeftRadius": "0px",
+                "borderColor": "rgb(255, 255, 255)",
+                "borderWidth": "0px",
+                "borderStyle": "none",
+                "paddingTop": "0px",
+                "paddingRight": "0px",
+                "paddingBottom": "0px",
+                "paddingLeft": "0px",
+                "marginTop": "12px",
+                "marginRight": "0px",
+                "marginBottom": "0px",
+                "marginLeft": "0px",
+                "boxShadow": "none",
+                "opacity": "1",
+                "display": "flex",
+                "position": "static",
+                "flexDirection": "row",
+                "justifyContent": "normal",
+                "alignItems": "normal",
+                "alignContent": "normal",
+                "flexWrap": "nowrap",
+                "flexGrow": "0",
+                "flexShrink": "1",
+                "flexBasis": "auto",
+                "gap": "12px",
+                "rowGap": "12px",
+                "columnGap": "12px",
+                "gridTemplateColumns": "none",
+                "gridTemplateRows": "none",
+                "overflowX": "visible",
+                "overflowY": "visible",
+                "backdropFilter": "none",
+                "transform": "none",
+                "transformOrigin": "344px 25px",
+                "zIndex": "auto",
+                "filter": "none"
+              },
+              "children": [
+                {
+                  "id": "node-37",
+                  "tagName": "div",
+                  "type": "frame",
+                  "name": "Container",
+                  "x": 0,
+                  "y": 0,
+                  "width": 90,
+                  "height": 50,
+                  "style": {
+                    "backgroundColor": "rgba(143, 143, 143, 1)",
+                    "backgroundImage": "none",
+                    "color": "rgba(255, 255, 255, 1)",
+                    "fontSize": "16px",
+                    "fontFamily": "Arial, Helvetica, sans-serif",
+                    "fontWeight": "400",
+                    "textAlign": "start",
+                    "lineHeight": "normal",
+                    "letterSpacing": "normal",
+                    "borderRadius": "0px",
+                    "borderTopLeftRadius": "0px",
+                    "borderTopRightRadius": "0px",
+                    "borderBottomRightRadius": "0px",
+                    "borderBottomLeftRadius": "0px",
+                    "borderColor": "rgba(255, 255, 255, 1)",
+                    "borderWidth": "0px",
+                    "borderStyle": "none",
+                    "paddingTop": "6px",
+                    "paddingRight": "6px",
+                    "paddingBottom": "6px",
+                    "paddingLeft": "6px",
+                    "marginTop": "0px",
+                    "marginRight": "0px",
+                    "marginBottom": "0px",
+                    "marginLeft": "0px",
+                    "boxShadow": "none",
+                    "opacity": "1",
+                    "display": "block",
+                    "position": "static",
+                    "flexDirection": "row",
+                    "justifyContent": "normal",
+                    "alignItems": "normal",
+                    "alignContent": "normal",
+                    "flexWrap": "nowrap",
+                    "flexGrow": "0",
+                    "flexShrink": "1",
+                    "flexBasis": "auto",
+                    "gap": "normal",
+                    "rowGap": "normal",
+                    "columnGap": "normal",
+                    "gridTemplateColumns": "none",
+                    "gridTemplateRows": "none",
+                    "overflowX": "visible",
+                    "overflowY": "visible",
+                    "backdropFilter": "none",
+                    "transform": "none",
+                    "transformOrigin": "45px 25px",
+                    "zIndex": "auto",
+                    "filter": "none"
+                  },
+                  "children": [
+                    {
+                      "id": "node-38",
+                      "tagName": "#text",
+                      "type": "text",
+                      "name": "Label",
+                      "x": 6,
+                      "y": 15,
+                      "width": 78,
+                      "height": 19,
+                      "style": {
+                        "backgroundColor": "rgba(0, 0, 0, 0)",
+                        "backgroundImage": "none",
+                        "color": "rgb(255, 255, 255)",
+                        "fontSize": "16px",
+                        "fontFamily": "Arial, Helvetica, sans-serif",
+                        "fontWeight": "400",
+                        "textAlign": "center",
+                        "lineHeight": "normal",
+                        "letterSpacing": "normal",
+                        "borderRadius": "0px",
+                        "borderTopLeftRadius": "0px",
+                        "borderTopRightRadius": "0px",
+                        "borderBottomRightRadius": "0px",
+                        "borderBottomLeftRadius": "0px",
+                        "borderColor": "rgb(0, 0, 0)",
+                        "borderWidth": "0px",
+                        "borderStyle": "none",
+                        "paddingTop": "6px",
+                        "paddingRight": "6px",
+                        "paddingBottom": "6px",
+                        "paddingLeft": "6px",
+                        "marginTop": "0px",
+                        "marginRight": "0px",
+                        "marginBottom": "0px",
+                        "marginLeft": "0px",
+                        "boxShadow": "none",
+                        "opacity": "1",
+                        "display": "block",
+                        "position": "static",
+                        "flexDirection": "row",
+                        "justifyContent": "normal",
+                        "alignItems": "normal",
+                        "alignContent": "normal",
+                        "flexWrap": "nowrap",
+                        "flexGrow": "0",
+                        "flexShrink": "1",
+                        "flexBasis": "auto",
+                        "gap": "normal",
+                        "rowGap": "normal",
+                        "columnGap": "normal",
+                        "gridTemplateColumns": "none",
+                        "gridTemplateRows": "none",
+                        "overflowX": "visible",
+                        "overflowY": "visible",
+                        "backdropFilter": "none",
+                        "transform": "none",
+                        "transformOrigin": "45px 25px",
+                        "zIndex": "auto",
+                        "filter": "none"
+                      },
+                      "text": "gray",
+                      "lines": 1,
+                      "textWidth": 32,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "node-39",
+                  "tagName": "div",
+                  "type": "frame",
+                  "name": "Container",
+                  "x": 102,
+                  "y": 0,
+                  "width": 90,
+                  "height": 50,
+                  "style": {
+                    "backgroundColor": "rgba(220, 112, 226, 1)",
+                    "backgroundImage": "none",
+                    "color": "rgba(255, 255, 255, 1)",
+                    "fontSize": "16px",
+                    "fontFamily": "Arial, Helvetica, sans-serif",
+                    "fontWeight": "400",
+                    "textAlign": "start",
+                    "lineHeight": "normal",
+                    "letterSpacing": "normal",
+                    "borderRadius": "0px",
+                    "borderTopLeftRadius": "0px",
+                    "borderTopRightRadius": "0px",
+                    "borderBottomRightRadius": "0px",
+                    "borderBottomLeftRadius": "0px",
+                    "borderColor": "rgba(255, 255, 255, 1)",
+                    "borderWidth": "0px",
+                    "borderStyle": "none",
+                    "paddingTop": "6px",
+                    "paddingRight": "6px",
+                    "paddingBottom": "6px",
+                    "paddingLeft": "6px",
+                    "marginTop": "0px",
+                    "marginRight": "0px",
+                    "marginBottom": "0px",
+                    "marginLeft": "0px",
+                    "boxShadow": "none",
+                    "opacity": "1",
+                    "display": "block",
+                    "position": "static",
+                    "flexDirection": "row",
+                    "justifyContent": "normal",
+                    "alignItems": "normal",
+                    "alignContent": "normal",
+                    "flexWrap": "nowrap",
+                    "flexGrow": "0",
+                    "flexShrink": "1",
+                    "flexBasis": "auto",
+                    "gap": "normal",
+                    "rowGap": "normal",
+                    "columnGap": "normal",
+                    "gridTemplateColumns": "none",
+                    "gridTemplateRows": "none",
+                    "overflowX": "visible",
+                    "overflowY": "visible",
+                    "backdropFilter": "none",
+                    "transform": "none",
+                    "transformOrigin": "45px 25px",
+                    "zIndex": "auto",
+                    "filter": "none"
+                  },
+                  "children": [
+                    {
+                      "id": "node-40",
+                      "tagName": "#text",
+                      "type": "text",
+                      "name": "Label",
+                      "x": 6,
+                      "y": 15,
+                      "width": 78,
+                      "height": 19,
+                      "style": {
+                        "backgroundColor": "rgba(0, 0, 0, 0)",
+                        "backgroundImage": "none",
+                        "color": "rgb(255, 255, 255)",
+                        "fontSize": "16px",
+                        "fontFamily": "Arial, Helvetica, sans-serif",
+                        "fontWeight": "400",
+                        "textAlign": "center",
+                        "lineHeight": "normal",
+                        "letterSpacing": "normal",
+                        "borderRadius": "0px",
+                        "borderTopLeftRadius": "0px",
+                        "borderTopRightRadius": "0px",
+                        "borderBottomRightRadius": "0px",
+                        "borderBottomLeftRadius": "0px",
+                        "borderColor": "rgb(0, 0, 0)",
+                        "borderWidth": "0px",
+                        "borderStyle": "none",
+                        "paddingTop": "6px",
+                        "paddingRight": "6px",
+                        "paddingBottom": "6px",
+                        "paddingLeft": "6px",
+                        "marginTop": "0px",
+                        "marginRight": "0px",
+                        "marginBottom": "0px",
+                        "marginLeft": "0px",
+                        "boxShadow": "none",
+                        "opacity": "1",
+                        "display": "block",
+                        "position": "static",
+                        "flexDirection": "row",
+                        "justifyContent": "normal",
+                        "alignItems": "normal",
+                        "alignContent": "normal",
+                        "flexWrap": "nowrap",
+                        "flexGrow": "0",
+                        "flexShrink": "1",
+                        "flexBasis": "auto",
+                        "gap": "normal",
+                        "rowGap": "normal",
+                        "columnGap": "normal",
+                        "gridTemplateColumns": "none",
+                        "gridTemplateRows": "none",
+                        "overflowX": "visible",
+                        "overflowY": "visible",
+                        "backdropFilter": "none",
+                        "transform": "none",
+                        "transformOrigin": "45px 25px",
+                        "zIndex": "auto",
+                        "filter": "none"
+                      },
+                      "text": "hue",
+                      "lines": 1,
+                      "textWidth": 27,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "node-41",
+                  "tagName": "div",
+                  "type": "frame",
+                  "name": "Container",
+                  "x": 204,
+                  "y": 0,
+                  "width": 90,
+                  "height": 50,
+                  "style": {
+                    "backgroundColor": "rgba(0, 0, 0, 0)",
+                    "backgroundImage": "linear-gradient(90deg, rgba(115, 38, 38, 1), rgba(128, 204, 128, 1))",
+                    "color": "rgba(255, 255, 255, 1)",
+                    "fontSize": "16px",
+                    "fontFamily": "Arial, Helvetica, sans-serif",
+                    "fontWeight": "400",
+                    "textAlign": "start",
+                    "lineHeight": "normal",
+                    "letterSpacing": "normal",
+                    "borderRadius": "0px",
+                    "borderTopLeftRadius": "0px",
+                    "borderTopRightRadius": "0px",
+                    "borderBottomRightRadius": "0px",
+                    "borderBottomLeftRadius": "0px",
+                    "borderColor": "rgba(255, 255, 255, 1)",
+                    "borderWidth": "0px",
+                    "borderStyle": "none",
+                    "paddingTop": "0px",
+                    "paddingRight": "0px",
+                    "paddingBottom": "0px",
+                    "paddingLeft": "0px",
+                    "marginTop": "0px",
+                    "marginRight": "0px",
+                    "marginBottom": "0px",
+                    "marginLeft": "0px",
+                    "boxShadow": "none",
+                    "opacity": "1",
+                    "display": "block",
+                    "position": "static",
+                    "flexDirection": "row",
+                    "justifyContent": "normal",
+                    "alignItems": "normal",
+                    "alignContent": "normal",
+                    "flexWrap": "nowrap",
+                    "flexGrow": "0",
+                    "flexShrink": "1",
+                    "flexBasis": "auto",
+                    "gap": "normal",
+                    "rowGap": "normal",
+                    "columnGap": "normal",
+                    "gridTemplateColumns": "none",
+                    "gridTemplateRows": "none",
+                    "overflowX": "visible",
+                    "overflowY": "visible",
+                    "backdropFilter": "none",
+                    "transform": "none",
+                    "transformOrigin": "45px 25px",
+                    "zIndex": "auto",
+                    "filter": "none"
+                  },
+                  "children": [
+                    {
+                      "id": "node-42",
+                      "tagName": "#text",
+                      "type": "text",
+                      "name": "Label",
+                      "x": 0,
+                      "y": 15,
+                      "width": 90,
+                      "height": 19,
+                      "style": {
+                        "backgroundColor": "rgba(0, 0, 0, 0)",
+                        "backgroundImage": "none",
+                        "color": "rgb(255, 255, 255)",
+                        "fontSize": "16px",
+                        "fontFamily": "Arial, Helvetica, sans-serif",
+                        "fontWeight": "400",
+                        "textAlign": "center",
+                        "lineHeight": "normal",
+                        "letterSpacing": "normal",
+                        "borderRadius": "0px",
+                        "borderTopLeftRadius": "0px",
+                        "borderTopRightRadius": "0px",
+                        "borderBottomRightRadius": "0px",
+                        "borderBottomLeftRadius": "0px",
+                        "borderColor": "rgb(0, 0, 0)",
+                        "borderWidth": "0px",
+                        "borderStyle": "none",
+                        "paddingTop": "0px",
+                        "paddingRight": "0px",
+                        "paddingBottom": "0px",
+                        "paddingLeft": "0px",
+                        "marginTop": "0px",
+                        "marginRight": "0px",
+                        "marginBottom": "0px",
+                        "marginLeft": "0px",
+                        "boxShadow": "none",
+                        "opacity": "1",
+                        "display": "block",
+                        "position": "static",
+                        "flexDirection": "row",
+                        "justifyContent": "normal",
+                        "alignItems": "normal",
+                        "alignContent": "normal",
+                        "flexWrap": "nowrap",
+                        "flexGrow": "0",
+                        "flexShrink": "1",
+                        "flexBasis": "auto",
+                        "gap": "normal",
+                        "rowGap": "normal",
+                        "columnGap": "normal",
+                        "gridTemplateColumns": "none",
+                        "gridTemplateRows": "none",
+                        "overflowX": "visible",
+                        "overflowY": "visible",
+                        "backdropFilter": "none",
+                        "transform": "none",
+                        "transformOrigin": "45px 25px",
+                        "zIndex": "auto",
+                        "filter": "none"
+                      },
+                      "text": "sat",
+                      "lines": 1,
+                      "textWidth": 22,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "node-43",
+              "tagName": "div",
+              "type": "frame",
+              "name": "Container",
+              "x": 56,
+              "y": 1159,
               "width": 688,
               "height": 80,
               "style": {
@@ -2324,11 +2807,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "344px 40px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-37",
+                  "id": "node-44",
                   "tagName": "div",
                   "type": "frame",
                   "name": "Container",
@@ -2384,15 +2868,16 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "40px 40px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "rasterize": true,
                   "rasterReason": "clip-path: polygon(50% 0px, 100% 38%, 82% 100%, 18% 100%, 0px 38%)",
-                  "rasterId": "raster-node-37"
+                  "rasterId": "raster-node-44"
                 },
                 {
-                  "id": "node-38",
+                  "id": "node-45",
                   "tagName": "div",
                   "type": "frame",
                   "name": "Container",
@@ -2448,15 +2933,16 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "40px 40px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "rasterize": true,
                   "rasterReason": "conic-gradient",
-                  "rasterId": "raster-node-38"
+                  "rasterId": "raster-node-45"
                 },
                 {
-                  "id": "node-39",
+                  "id": "node-46",
                   "tagName": "div",
                   "type": "frame",
                   "name": "Container",
@@ -2512,15 +2998,16 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "40px 40px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "blur(4px) hue-rotate(40deg)"
                   },
                   "children": [],
                   "rasterize": true,
                   "rasterReason": "filter: blur(4px) hue-rotate(40deg)",
-                  "rasterId": "raster-node-39"
+                  "rasterId": "raster-node-46"
                 },
                 {
-                  "id": "node-40",
+                  "id": "node-47",
                   "tagName": "div",
                   "type": "frame",
                   "name": "Container",
@@ -2576,17 +3063,18 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "28.8984px 28px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "rasterize": true,
                   "rasterReason": "background-clip: text",
-                  "rasterId": "raster-node-40"
+                  "rasterId": "raster-node-47"
                 }
               ]
             },
             {
-              "id": "node-42",
+              "id": "node-49",
               "tagName": "#after",
               "type": "text",
               "name": "::after",
@@ -2643,7 +3131,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "26.5703px 10px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "text": "BETA",
               "lines": 1,
@@ -2653,14 +3142,14 @@
           ]
         },
         {
-          "id": "node-43",
+          "id": "node-50",
           "tagName": "aside",
           "type": "frame",
           "name": "Sidebar:form-side",
           "x": 800,
           "y": 0,
           "width": 480,
-          "height": 1193,
+          "height": 1279,
           "style": {
             "backgroundColor": "rgb(255, 255, 255)",
             "backgroundImage": "none",
@@ -2708,12 +3197,13 @@
             "overflowY": "visible",
             "backdropFilter": "none",
             "transform": "none",
-            "transformOrigin": "240px 596.5px",
-            "zIndex": "auto"
+            "transformOrigin": "240px 639.5px",
+            "zIndex": "auto",
+            "filter": "none"
           },
           "children": [
             {
-              "id": "node-44",
+              "id": "node-51",
               "tagName": "div",
               "type": "text",
               "name": "Container:form-eyebrow",
@@ -2769,7 +3259,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 8px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [],
               "text": "Stripe",
@@ -2777,7 +3268,7 @@
               "textWidth": 40
             },
             {
-              "id": "node-45",
+              "id": "node-52",
               "tagName": "h2",
               "type": "text",
               "name": "Heading 2",
@@ -2833,7 +3324,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 17px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [],
               "text": "Create your account",
@@ -2841,7 +3333,7 @@
               "textWidth": 291
             },
             {
-              "id": "node-46",
+              "id": "node-53",
               "tagName": "div",
               "type": "frame",
               "name": "Container:field",
@@ -2897,11 +3389,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 32px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-47",
+                  "id": "node-54",
                   "tagName": "label",
                   "type": "text",
                   "name": "Label",
@@ -2957,7 +3450,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 8px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Email",
@@ -2965,7 +3459,7 @@
                   "textWidth": 38
                 },
                 {
-                  "id": "node-48",
+                  "id": "node-55",
                   "tagName": "div",
                   "type": "frame",
                   "name": "Container:input-wrap",
@@ -3021,11 +3515,12 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 21px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
-                      "id": "node-49",
+                      "id": "node-56",
                       "tagName": "svg",
                       "type": "image",
                       "name": "Icon",
@@ -3081,13 +3576,14 @@
                         "backdropFilter": "none",
                         "transform": "matrix(1, 0, 0, 1, 0, -9)",
                         "transformOrigin": "9px 9px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [],
                       "svgMarkup": "<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" style=\"position:absolute;left:12px;top:50%;transform:translateY(-50%);\">\n            <path d=\"M3 7l9 6 9-6M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l2-2h14l2 2\" stroke=\"#8792a2\" stroke-width=\"2\" stroke-linejoin=\"round\" fill=\"none\"/>\n          </svg>"
                     },
                     {
-                      "id": "node-50",
+                      "id": "node-57",
                       "tagName": "input",
                       "type": "frame",
                       "name": "Input",
@@ -3143,11 +3639,12 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "192px 21px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "children": [
                         {
-                          "id": "node-51",
+                          "id": "node-58",
                           "tagName": "#text",
                           "type": "text",
                           "name": "Value",
@@ -3203,7 +3700,8 @@
                             "backdropFilter": "none",
                             "transform": "none",
                             "transformOrigin": "192px 21px",
-                            "zIndex": "auto"
+                            "zIndex": "auto",
+                            "filter": "none"
                           },
                           "text": "you@example.com",
                           "lines": 1,
@@ -3217,7 +3715,7 @@
               ]
             },
             {
-              "id": "node-52",
+              "id": "node-59",
               "tagName": "div",
               "type": "frame",
               "name": "Container:field",
@@ -3273,11 +3771,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 32px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-53",
+                  "id": "node-60",
                   "tagName": "label",
                   "type": "text",
                   "name": "Label",
@@ -3333,7 +3832,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 8px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Full name",
@@ -3341,7 +3841,7 @@
                   "textWidth": 66
                 },
                 {
-                  "id": "node-54",
+                  "id": "node-61",
                   "tagName": "input",
                   "type": "frame",
                   "name": "Input",
@@ -3397,11 +3897,12 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 21px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
-                      "id": "node-55",
+                      "id": "node-62",
                       "tagName": "#text",
                       "type": "text",
                       "name": "Value",
@@ -3457,7 +3958,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "192px 21px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "text": "Jane Cooper",
                       "lines": 1,
@@ -3469,7 +3971,7 @@
               ]
             },
             {
-              "id": "node-56",
+              "id": "node-63",
               "tagName": "div",
               "type": "frame",
               "name": "Container:field",
@@ -3525,11 +4027,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 32px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-57",
+                  "id": "node-64",
                   "tagName": "label",
                   "type": "text",
                   "name": "Label",
@@ -3585,7 +4088,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 8px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Country",
@@ -3593,7 +4097,7 @@
                   "textWidth": 54
                 },
                 {
-                  "id": "node-58",
+                  "id": "node-65",
                   "tagName": "select",
                   "type": "frame",
                   "name": "Select",
@@ -3649,11 +4153,12 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 21px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
-                      "id": "node-59",
+                      "id": "node-66",
                       "tagName": "#text",
                       "type": "text",
                       "name": "Value",
@@ -3709,7 +4214,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "192px 21px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "text": "United States",
                       "lines": 1,
@@ -3717,7 +4223,7 @@
                       "children": []
                     },
                     {
-                      "id": "node-60",
+                      "id": "node-67",
                       "tagName": "svg",
                       "type": "image",
                       "name": "Chevron",
@@ -3773,7 +4279,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "192px 21px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "svgMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M6 9l6 6 6-6\" stroke=\"rgb(26, 31, 54)\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
                       "children": []
@@ -3783,7 +4290,7 @@
               ]
             },
             {
-              "id": "node-61",
+              "id": "node-68",
               "tagName": "div",
               "type": "frame",
               "name": "Container:field",
@@ -3839,11 +4346,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 32px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-62",
+                  "id": "node-69",
                   "tagName": "label",
                   "type": "text",
                   "name": "Label",
@@ -3899,7 +4407,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 8px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Region (custom dropdown)",
@@ -3907,7 +4416,7 @@
                   "textWidth": 182
                 },
                 {
-                  "id": "node-63",
+                  "id": "node-70",
                   "tagName": "div",
                   "type": "frame",
                   "name": "Container - Region",
@@ -3963,11 +4472,12 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 21px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
-                      "id": "node-64",
+                      "id": "node-71",
                       "tagName": "#text",
                       "type": "text",
                       "name": "Value",
@@ -4023,7 +4533,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "192px 21px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "text": "North America",
                       "lines": 1,
@@ -4031,7 +4542,7 @@
                       "children": []
                     },
                     {
-                      "id": "node-65",
+                      "id": "node-72",
                       "tagName": "svg",
                       "type": "image",
                       "name": "Chevron",
@@ -4087,7 +4598,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "192px 21px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "svgMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M6 9l6 6 6-6\" stroke=\"rgb(0, 0, 0)\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>",
                       "children": []
@@ -4097,7 +4609,7 @@
               ]
             },
             {
-              "id": "node-66",
+              "id": "node-73",
               "tagName": "div",
               "type": "frame",
               "name": "Container:field",
@@ -4153,11 +4665,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 32px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-67",
+                  "id": "node-74",
                   "tagName": "label",
                   "type": "text",
                   "name": "Label",
@@ -4213,7 +4726,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 8px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Password",
@@ -4221,7 +4735,7 @@
                   "textWidth": 67
                 },
                 {
-                  "id": "node-68",
+                  "id": "node-75",
                   "tagName": "input",
                   "type": "frame",
                   "name": "Input",
@@ -4277,11 +4791,12 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 21px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [
                     {
-                      "id": "node-69",
+                      "id": "node-76",
                       "tagName": "#text",
                       "type": "text",
                       "name": "Value",
@@ -4337,7 +4852,8 @@
                         "backdropFilter": "none",
                         "transform": "none",
                         "transformOrigin": "192px 21px",
-                        "zIndex": "auto"
+                        "zIndex": "auto",
+                        "filter": "none"
                       },
                       "text": "Create a strong password",
                       "lines": 1,
@@ -4349,7 +4865,7 @@
               ]
             },
             {
-              "id": "node-70",
+              "id": "node-77",
               "tagName": "div",
               "type": "frame",
               "name": "Container:checkbox-row",
@@ -4405,11 +4921,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 8px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-71",
+                  "id": "node-78",
                   "tagName": "input",
                   "type": "frame",
                   "name": "Input",
@@ -4465,12 +4982,13 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "6.5px 6.5px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": []
                 },
                 {
-                  "id": "node-72",
+                  "id": "node-79",
                   "tagName": "span",
                   "type": "text",
                   "name": "Span",
@@ -4526,7 +5044,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "136.195px 8px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "children": [],
                   "text": "Email me product updates and account tips.",
@@ -4536,7 +5055,7 @@
               ]
             },
             {
-              "id": "node-73",
+              "id": "node-80",
               "tagName": "button",
               "type": "frame",
               "name": "Button:btn-primary",
@@ -4592,11 +5111,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 22px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-74",
+                  "id": "node-81",
                   "tagName": "#text",
                   "type": "text",
                   "name": "Label",
@@ -4652,7 +5172,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 22px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "text": "Create account",
                   "lines": 1,
@@ -4662,7 +5183,7 @@
               ]
             },
             {
-              "id": "node-75",
+              "id": "node-82",
               "tagName": "div",
               "type": "text",
               "name": "Container:divider",
@@ -4718,7 +5239,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 7.5px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [],
               "text": "or",
@@ -4726,7 +5248,7 @@
               "textWidth": 12
             },
             {
-              "id": "node-76",
+              "id": "node-83",
               "tagName": "button",
               "type": "frame",
               "name": "Button:btn-google",
@@ -4782,11 +5304,12 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 22px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [
                 {
-                  "id": "node-77",
+                  "id": "node-84",
                   "tagName": "#text",
                   "type": "text",
                   "name": "Label",
@@ -4842,7 +5365,8 @@
                     "backdropFilter": "none",
                     "transform": "none",
                     "transformOrigin": "192px 22px",
-                    "zIndex": "auto"
+                    "zIndex": "auto",
+                    "filter": "none"
                   },
                   "text": "Continue with Google",
                   "lines": 1,
@@ -4852,7 +5376,7 @@
               ]
             },
             {
-              "id": "node-78",
+              "id": "node-85",
               "tagName": "p",
               "type": "text",
               "name": "Paragraph:terms",
@@ -4908,7 +5432,8 @@
                 "backdropFilter": "none",
                 "transform": "none",
                 "transformOrigin": "192px 15px",
-                "zIndex": "auto"
+                "zIndex": "auto",
+                "filter": "none"
               },
               "children": [],
               "text": "By creating an account, you agree to the Terms and Privacy\nPolicy.",

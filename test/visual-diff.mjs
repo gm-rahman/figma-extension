@@ -67,6 +67,8 @@ function styleFromNode(n) {
     css.push(`box-shadow:${s.boxShadow}`);
   if (s.backdropFilter && s.backdropFilter !== 'none')
     css.push(`backdrop-filter:${s.backdropFilter}`);
+  if (s.filter && s.filter !== 'none')
+    css.push(`filter:${s.filter}`);
   // CSS transform — the preview can render the full matrix (skew, rotate, scale).
   // (Figma can only honour rotation; skewed elements stay upright in the plugin.)
   if (s.transform && s.transform !== 'none' && s.transform !== 'matrix(1, 0, 0, 1, 0, 0)') {

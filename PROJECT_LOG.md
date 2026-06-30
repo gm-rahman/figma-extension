@@ -502,6 +502,40 @@ dashboard. Audited with the harness (data, not guessing):
   session), so Figma embeds them all. The user's missing areas were a **stale
   extension build** — resolved by rebuild + reload + recapture.
 
+### Session 2026-06-27 (cont.) — CSS filter → Figma effects (user insight)
+User's idea: map CSS effect properties to Figma's Effect enums. Confirmed Figma's
+plugin API supports DROP_SHADOW/INNER_SHADOW/LAYER_BLUR/BACKGROUND_BLUR/GLASS/
+NOISE/TEXTURE/SHADER. We already mapped shadows + backdrop-blur; the gap was
+`filter:`, which we were RASTERIZING wholesale.
+- Added `filter` to `ElementStyle` (captured from computed style).
+- `filterIsEffectMappable()`: mappable iff every function is `blur()`/`drop-shadow()`.
+  Such filters are NO LONGER rasterized.
+- Plugin `parseFilterEffects()`: `blur(Npx)` → `LAYER_BLUR`, `drop-shadow(...)` →
+  `DROP_SHADOW`, added to frame effects (additive with box-shadow + backdrop).
+- Mixed/unsupported filters (hue-rotate, grayscale…) still rasterize. Verified:
+  `blur(4px)` mappable; `blur(4px) hue-rotate(40deg)` → rasterize.
+- Deliberately did NOT map backdrop-filter→GLASS: CSS "glass" = background-blur +
+  translucent fill (BACKGROUND_BLUR, already correct); Figma GLASS adds refraction/
+  dispersion CSS lacks → would over-stylize. Both builds clean; plugin tsc clean.
+
+### Session 2026-06-27 (cont.) — Colour filters baked (no rasterize)
+User insight: map colour filters too. Figma has NO per-layer hue/saturation effect
+(HSL/HSB is colour-picker only), so we bake the transform into captured colours at
+capture time — keeping the element EDITABLE.
+- New `extension/src/color-filter.ts`: CSS-spec colour-matrix math for grayscale /
+  sepia / saturate / hue-rotate / invert / brightness / contrast; `filterIsColorOnly`,
+  `buildColorXform` (composes the function list), `applyXformToStyle` (rewrites
+  backgroundColor / color / borderColor / box-shadow colour / gradient stops).
+- `capture-core`: a module-level `activeColorXform` threads down the subtree of a
+  filtered element (set/restore around the frame block). `rasterizeReason` now
+  skips colour-only filters when `subtreeHasRaster(el)` is false (no img/svg/canvas/
+  video) — those get baked; colour filters over images, or mixed filters, still raster.
+- Verified on fixture: `grayscale(1)` → rgb 143 grey; `hue-rotate(90deg)` → shifted;
+  `saturate(0.3)` desaturates BOTH solid + gradient stops; none rasterized; the
+  mixed `blur+hue` blob still rasterizes. Plugin unchanged (renders baked colours).
+- Known gap: synthesized text children (button labels/input values built by the
+  parent) don't yet receive the xform — rare (colour filter + synthetic label).
+
 ---
 
 ## 4. Current status

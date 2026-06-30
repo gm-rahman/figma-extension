@@ -177,6 +177,13 @@
         <span>Rotated card with per-corner radius and layered shadows.</span>
       </div>
 
+      <!-- Colour-filter bake: CSS-only (no images) → baked into colours, NOT raster -->
+      <div style="display:flex; gap:12px; margin-top:12px;">
+        <div style="width:90px;height:50px;background:rgb(60,160,220);filter:grayscale(1);color:#fff;padding:6px;">gray</div>
+        <div style="width:90px;height:50px;background:rgb(60,160,220);filter:hue-rotate(90deg);color:#fff;padding:6px;">hue</div>
+        <div style="width:90px;height:50px;background:linear-gradient(90deg,#ff0000,#00ff00);filter:saturate(0.3);">sat</div>
+      </div>
+
       <!-- Gap #3 torture tests: Figma-impossible CSS that must be rasterized -->
       <div style="display:flex; gap:12px; margin-top:12px; align-items:center;">
         <!-- 1. clip-path polygon badge -->

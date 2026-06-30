@@ -62,6 +62,7 @@ function baseStyle(): ElementStyle {
     gap: 'normal', rowGap: 'normal', columnGap: 'normal',
     gridTemplateColumns: 'none', gridTemplateRows: 'none', overflowX: 'visible', overflowY: 'visible',
     backdropFilter: 'none', transform: 'none', transformOrigin: '50% 50%', zIndex: 'auto',
+    filter: 'none',
   };
 }
 

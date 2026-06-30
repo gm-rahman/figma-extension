@@ -340,6 +340,24 @@ function parseSingleShadow(css: string): Effect | null {
   };
 }
 
+// CSS `filter:` → Figma effects (the user's "map CSS to Figma effect" insight):
+//   blur(Npx)        → LAYER_BLUR (blurs the element itself)
+//   drop-shadow(...) → DROP_SHADOW
+// Other filter functions are handled by rasterization upstream, so they won't
+// reach here.
+function parseFilterEffects(css: string): Effect[] {
+  if (!css || css === 'none') return [];
+  const out: Effect[] = [];
+  const blur = css.match(/blur\(\s*([\d.]+)px\s*\)/i);
+  if (blur) {
+    const radius = parseFloat(blur[1]);
+    if (radius > 0) out.push({ type: 'LAYER_BLUR', blurType: 'NORMAL', radius, visible: true } as unknown as Effect);
+  }
+  const ds = css.match(/drop-shadow\(([^)]+)\)/i);
+  if (ds) { const e = parseSingleShadow(ds[1]); if (e) out.push(e); }
+  return out;
+}
+
 function parseShadows(css: string): Effect[] {
   if (!css || css === 'none') return [];
   return splitTopLevelCommas(css).map(parseSingleShadow).filter((e): e is Effect => !!e);
@@ -596,10 +614,11 @@ async function buildNode(
         }
       }
 
-      // Effects: every shadow + backdrop blur (additive)
+      // Effects: every shadow + backdrop blur + element filter (all additive).
       const effects: Effect[] = [...parseShadows(capture.style.boxShadow)];
       const bblur = parseBackdropBlur(capture.style.backdropFilter);
       if (bblur) effects.push(bblur);
+      effects.push(...parseFilterEffects(capture.style.filter));
       if (effects.length) frame.effects = effects;
 
       // Apply Auto Layout to this frame if it is a flex container

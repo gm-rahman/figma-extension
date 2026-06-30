@@ -1,4 +1,17 @@
 import { CaptureNode, CapturePayload, ElementStyle } from './types';
+import { filterIsColorOnly, buildColorXform, composeXform, applyXformToStyle } from './color-filter';
+
+// Active CSS colour-filter transform, threaded down the subtree of a filtered
+// element so its captured colours bake the filter in (instead of rasterizing).
+type ColorXform = (rgb: [number, number, number]) => [number, number, number];
+let activeColorXform: ColorXform | null = null;
+
+// Does this subtree contain a raster surface (img/photo/svg/canvas/video)? If so,
+// a colour filter can't be baked into data colours and we rasterize instead.
+function subtreeHasRaster(el: Element): boolean {
+  if (/^(img|picture|video|svg|canvas)$/.test(el.tagName.toLowerCase())) return true;
+  return !!el.querySelector('img, picture, video, svg, canvas');
+}
 
 // Depth is driven by the real DOM tree — this is only a stack-overflow safety net,
 // effectively unlimited for any real page/SPA.
@@ -88,7 +101,18 @@ function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
     transform:          s.transform || 'none',
     transformOrigin:    s.transformOrigin || '50% 50%',
     zIndex:             s.zIndex || 'auto',
+    filter:             s.filter || 'none',
   };
+}
+
+// A CSS filter is "effect-mappable" when every function in it is blur() or
+// drop-shadow() — Figma can reproduce those natively (LAYER_BLUR / DROP_SHADOW),
+// so we DON'T rasterize. Anything else (hue-rotate, contrast, grayscale…) has no
+// Figma effect and still falls back to a screenshot.
+function filterIsEffectMappable(filter: string): boolean {
+  if (!filter || filter === 'none') return false;
+  const fns = filter.match(/([a-z-]+)\(/gi) || [];
+  return fns.length > 0 && fns.every(fn => /^(blur|drop-shadow)\(/i.test(fn));
 }
 
 function getStyle(el: Element): ElementStyle {
@@ -116,6 +140,7 @@ function stripBoxDecoration(s: ElementStyle): ElementStyle {
     borderBottomLeftRadius:  '0px',
     borderBottomRightRadius: '0px',
     transform:               'none',
+    filter:                  'none',
   };
 }
 
@@ -265,7 +290,17 @@ function rasterizeReason(el: Element, s: CSSStyleDeclaration): string {
   if (s.clipPath && s.clipPath !== 'none')             return `clip-path: ${s.clipPath}`;
   const mask = s.mask || (s as any).webkitMask;
   if (mask && mask !== 'none' && !/^none\b/.test(mask)) return `mask: ${mask}`;
-  if (s.filter && s.filter !== 'none')                 return `filter: ${s.filter}`;
+  // Only rasterize filters Figma can't do natively. blur()/drop-shadow() →
+  // LAYER_BLUR/DROP_SHADOW in the plugin. Colour-only filters (hue-rotate,
+  // grayscale, saturate…) over an image-free subtree are BAKED into the captured
+  // colours (editable) — only colour filters over images, or mixed filters, raster.
+  if (s.filter && s.filter !== 'none' && !filterIsEffectMappable(s.filter)) {
+    if (filterIsColorOnly(s.filter) && !subtreeHasRaster(el)) {
+      /* baked at capture time — not rasterized */
+    } else {
+      return `filter: ${s.filter}`;
+    }
+  }
   // Blend modes are per-layer (comma-separated). Only flag if ANY layer is non-normal.
   const anyNonNormal = (v: string) => v.split(',').some(x => x.trim() && x.trim() !== 'normal');
   if (s.mixBlendMode && anyNonNormal(s.mixBlendMode))         return `mix-blend-mode: ${s.mixBlendMode}`;
@@ -994,6 +1029,20 @@ function serializeElement(
     children: [],
   };
 
+  // Colour-filter bake: apply any inherited colour transform to this node's
+  // colours, and if THIS element adds a colour-only filter over an image-free
+  // subtree, carry the composed transform down to descendants (see color-filter.ts).
+  if (activeColorXform) applyXformToStyle(node.style, activeColorXform);
+  let childColorXform = activeColorXform;
+  if (filterIsColorOnly(s.filter) && !subtreeHasRaster(el)) {
+    const own = buildColorXform(s.filter);
+    if (own) {
+      applyXformToStyle(node.style, own);
+      childColorXform = composeXform(activeColorXform, own);
+      node.style.filter = 'none'; // consumed — don't also map/raster it
+    }
+  }
+
   // Rasterization: if this element uses Figma-impossible CSS, flag it as an image
   // and DON'T recurse — the screenshot will contain its whole subtree.
   const reason = rasterizeReason(el, s);
@@ -1089,6 +1138,9 @@ function serializeElement(
   }
 
   if (type === 'frame') {
+    // Descendants inherit this element's (composed) colour-filter transform.
+    const savedColorXform = activeColorXform;
+    activeColorXform = childColorXform;
     // Native form controls AND custom dropdowns: keep the box but inject ONE
     // synthetic value text — never recurse into option markup. For dropdowns
     // (select / custom listbox) also add a chevron icon on the right.
@@ -1127,6 +1179,8 @@ function serializeElement(
     // Probe for pseudo-elements LAST so any real children are already in place.
     // Skip if we ended up demoting to text above (no children container).
     if (node.type === 'frame') attachPseudos(el, rect, node);
+
+    activeColorXform = savedColorXform; // restore for siblings
   }
 
   return node;
@@ -1136,6 +1190,7 @@ export function buildPayload(root: Element, mode: CapturePayload['mode']): Captu
   nodeCounter   = 0;
   capturedCount = 0;
   rasterTargets = [];
+  activeColorXform = null;
 
   const pageW = document.documentElement.scrollWidth;
   const pageH = document.documentElement.scrollHeight;
