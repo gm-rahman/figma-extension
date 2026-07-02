@@ -26,22 +26,63 @@ function isSvgSource(url: string, contentType: string): boolean {
   return contentType === 'image/svg+xml' || /\.svg(\?|#|$)/i.test(url);
 }
 
-// Decode a raster, and if it exceeds Figma's 4096px limit (createImage throws
-// above it), downscale to fit. Small files skip the decode cost. SVGs never reach
-// here. Returns base64-encoded bytes + a mime type.
+// Detect WebP by RIFF magic bytes: bytes 0-3 = "RIFF", bytes 8-11 = "WEBP".
+function isWebP(bytes: Uint8Array): boolean {
+  if (bytes.length < 12) return false;
+  return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 // RIFF
+      && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50; // WEBP
+}
+
+// Detect AVIF by checking for 'ftyp' box with 'avif' or 'avis' brand.
+function isAvif(bytes: Uint8Array): boolean {
+  if (bytes.length < 12) return false;
+  // bytes 4-7 = "ftyp"
+  if (bytes[4] !== 0x66 || bytes[5] !== 0x74 || bytes[6] !== 0x79 || bytes[7] !== 0x70) return false;
+  // bytes 8-11 = brand ("avif" or "avis")
+  const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+  return brand === 'avif' || brand === 'avis';
+}
+
+// Returns true if the format is unsupported by figma.createImage (which only
+// accepts PNG, JPEG, and GIF). These formats must be re-encoded to PNG.
+function needsReencode(bytes: Uint8Array, mime: string): boolean {
+  if (isWebP(bytes) || isAvif(bytes)) return true;
+  // Content-Type fallback: servers sometimes lie, but these are never PNG/JPEG/GIF.
+  if (mime === 'image/webp' || mime === 'image/avif') return true;
+  return false;
+}
+
+// Re-encode an image buffer to PNG via OffscreenCanvas. Used for formats that
+// figma.createImage cannot decode (WebP, AVIF) and for rasters exceeding the
+// 4096px limit. SVGs never reach here.
 async function normalizeRaster(buf: ArrayBuffer, mime: string): Promise<{ b64: string; mime: string }> {
   const bytes = new Uint8Array(buf);
-  // Only pay the decode cost for files big enough to plausibly exceed 4096px.
-  if (buf.byteLength < 400_000 || typeof createImageBitmap === 'undefined') {
+  const mustReencode = needsReencode(bytes, mime);
+
+  // Skip the decode cost for small files in Figma-native formats (PNG/JPEG/GIF).
+  if (!mustReencode && (buf.byteLength < 400_000 || typeof createImageBitmap === 'undefined')) {
     return { b64: bytesToBase64(bytes), mime };
   }
+
+  // WebP/AVIF MUST be re-encoded even if createImageBitmap is missing — without
+  // it we can't decode, so fall through to the catch and return a best-effort PNG.
+  if (mustReencode && typeof createImageBitmap === 'undefined') {
+    // Can't re-encode without createImageBitmap — return the raw bytes and hope
+    // for the best (the plugin side will catch and show a placeholder).
+    return { b64: bytesToBase64(bytes), mime };
+  }
+
   try {
     const bmp = await createImageBitmap(new Blob([buf], { type: mime }));
-    if (bmp.width <= MAX_IMAGE_DIM && bmp.height <= MAX_IMAGE_DIM) {
+    const needsDownscale = bmp.width > MAX_IMAGE_DIM || bmp.height > MAX_IMAGE_DIM;
+
+    if (!mustReencode && !needsDownscale) {
       bmp.close();
       return { b64: bytesToBase64(bytes), mime };
     }
-    const scale  = MAX_IMAGE_DIM / Math.max(bmp.width, bmp.height);
+
+    // Re-encode: either the format is unsupported or the dimensions are too large.
+    const scale  = needsDownscale ? MAX_IMAGE_DIM / Math.max(bmp.width, bmp.height) : 1;
     const w      = Math.max(1, Math.round(bmp.width  * scale));
     const h      = Math.max(1, Math.round(bmp.height * scale));
     const canvas = new OffscreenCanvas(w, h);

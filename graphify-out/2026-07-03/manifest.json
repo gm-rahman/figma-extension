@@ -35,14 +35,14 @@
     "semantic_hash": "68f69b5455b70faf582d166b44d556de"
   },
   "extension/src/background.ts": {
-    "mtime": 1783035263.863734,
-    "ast_hash": "ce01b4ea42a6ec48ffe921def8cfc2e7",
-    "semantic_hash": ""
+    "mtime": 1782756094.4425516,
+    "ast_hash": "a9ea7963b421147f9c6e8b00da46b9ec",
+    "semantic_hash": "a9ea7963b421147f9c6e8b00da46b9ec"
   },
   "extension/src/capture-core.ts": {
-    "mtime": 1783031945.239904,
-    "ast_hash": "574330b5231a978a8e187e3b8988aec8",
-    "semantic_hash": ""
+    "mtime": 1783016577.985029,
+    "ast_hash": "e8385076827365e27a05c6b5e7b5930a",
+    "semantic_hash": "e8385076827365e27a05c6b5e7b5930a"
   },
   "extension/src/color-filter.ts": {
     "mtime": 1782851407.6512568,
@@ -120,9 +120,9 @@
     "semantic_hash": "0bfff04820158e0028d17abbf56ea224"
   },
   "test/capture.json": {
-    "mtime": 1783031992.4564455,
-    "ast_hash": "ca896d5c00f1afffaf019b25501dd89f",
-    "semantic_hash": ""
+    "mtime": 1783016657.4632444,
+    "ast_hash": "cd8ef3cc5b17dac78d503e16abe971ed",
+    "semantic_hash": "cd8ef3cc5b17dac78d503e16abe971ed"
   },
   "test/package.json": {
     "mtime": 1782427190.3091314,
@@ -140,9 +140,9 @@
     "semantic_hash": "5dd9623c8f32801b01fff2856d7a96e8"
   },
   "test/snapshot/fresha.json": {
-    "mtime": 1783031992.4796143,
-    "ast_hash": "53cdcc9980176be9eb35cc84f4f75578",
-    "semantic_hash": ""
+    "mtime": 1783016657.487299,
+    "ast_hash": "8b00692960d6be7b89675262a6c28c5d",
+    "semantic_hash": "8b00692960d6be7b89675262a6c28c5d"
   },
   "test/snapshot/stripe.json": {
     "mtime": 1783016646.799278,
@@ -155,9 +155,9 @@
     "semantic_hash": "930fe4f3e715c12a97bc6d5dfa45029c"
   },
   "PROJECT_LOG.md": {
-    "mtime": 1783032007.594925,
-    "ast_hash": "265212407316209da9b5fdf630005696",
-    "semantic_hash": ""
+    "mtime": 1783016676.2693465,
+    "ast_hash": "3d60666db4d5d324d2283a637ded66c8",
+    "semantic_hash": "3d60666db4d5d324d2283a637ded66c8"
   },
   "RASTERIZATION_PLAN.md": {
     "mtime": 1782511439.4843926,
@@ -190,9 +190,9 @@
     "semantic_hash": "e72cd2d62114d56e12f24d613a7e503e"
   },
   "test/preview.html": {
-    "mtime": 1783031992.619923,
-    "ast_hash": "8b34b4426a70d352593d5696d4808762",
-    "semantic_hash": ""
+    "mtime": 1783016657.6272132,
+    "ast_hash": "254e9b61c04f0c43c05a49d1d3a20c2f",
+    "semantic_hash": "254e9b61c04f0c43c05a49d1d3a20c2f"
   },
   ".agents/rules/graphify.md": {
     "mtime": 1783030258.0218272,
@@ -203,10 +203,5 @@
     "mtime": 1783030258.0228302,
     "ast_hash": "637776aa6f7496d069afe7520c845c8a",
     "semantic_hash": "637776aa6f7496d069afe7520c845c8a"
-  },
-  ".claude/settings.json": {
-    "mtime": 1783032314.9774659,
-    "ast_hash": "42f55003c1547d16450f4329c5c82507",
-    "semantic_hash": ""
   }
 }
