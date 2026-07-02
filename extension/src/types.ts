@@ -79,6 +79,9 @@ export interface CaptureNode {
   /** Actual rendered text width (max line-box width from Range.getClientRects, in px).
    *  Lets the plugin pick sizing mode and centering offset without guessing. */
   textWidth?: number;
+  /** CSS text-overflow:ellipsis was clipping this single-line text — render at the
+   *  captured width with Figma textTruncation:'ENDING' instead of auto-hug. */
+  truncate?: boolean;
   src?: string;
   /** Raw SVG markup — when present, the plugin builds native Figma vector layers from it */
   svgMarkup?: string;

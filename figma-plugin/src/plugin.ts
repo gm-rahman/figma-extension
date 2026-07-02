@@ -684,6 +684,17 @@ async function buildNode(
       //   • Centre/right text in a wider captured box → shift x so it stays put.
       const lineCount = capture.lines ?? Math.max(1, Math.round(h / lhPx));
       let xOffset = 0;
+      if (capture.truncate) {
+        // CSS text-overflow:ellipsis → clip at the captured box width with a native
+        // Figma ellipsis, exactly like the browser (fixes card-address overlap).
+        text.resize(Math.max(w, 1), Math.max(h, 1));
+        text.textAutoResize = 'NONE';
+        try { (text as any).textTruncation = 'ENDING'; } catch { /* older runtime */ }
+        parent.appendChild(text);
+        if (parentIsAutoLayout) { try { text.layoutPositioning = 'ABSOLUTE'; } catch {} }
+        applyTransform(text, capture.style, x, y);
+        break;
+      }
       text.textAutoResize = 'WIDTH_AND_HEIGHT';
       if (capture.textWidth && capture.textWidth < w) {
         const slack = w - capture.textWidth;

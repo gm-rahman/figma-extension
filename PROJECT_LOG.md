@@ -536,6 +536,43 @@ capture time — keeping the element EDITABLE.
 - Known gap: synthesized text children (button labels/input values built by the
   parent) don't yet receive the xform — rare (colour filter + synthetic label).
 
+### Session 2026-07-03 — P1 ellipsis truncation + P2 icon-font glyphs
+From the card-comparison screenshots (addresses overlapping neighbours; arrow
+showing a literal "P"):
+- **P1 (ellipsis):** CSS `text-overflow:ellipsis` shows a clipped line but
+  `innerText` is the FULL string → auto-hug overflowed into the next card. Now:
+  capture marks `truncate:true` when `textOverflow==='ellipsis' && whiteSpace===
+  'nowrap'` and the measured text exceeds the box (both the plain-text branch AND
+  `makeLeafTextChild` for styled leaves); plugin renders fixed-size +
+  `textTruncation:'ENDING'` (native Figma ellipsis); preview mirrors with
+  CSS ellipsis. Verified: fixture truncates; live Fresha → **24 truncated
+  addresses** (the exact overlap bug).
+- **P2 (icon-font glyphs):** 1-2 char text in a ≤56px box drawn with a PUA
+  codepoint or an icon-family font (icon/awesome/material/…) → rasterized
+  ('icon-font glyph') instead of rendering a literal letter. Common text fonts
+  whitelisted so ratings/initials stay editable. Verified via fixture PUA glyph
+  (rasterized ✓, in images map). Fresha's visible icons turned out to be real
+  SVGs (its 1×1 "P" spans are hidden labels, already size-filtered) — P2 targets
+  FontAwesome-style sites.
+- Remaining visual deltas on Fresha traced to: RoobertPRO font absence (Gap #4)
+  and animation-frame variance of the rasterized 3D spotlight — not capture bugs.
+
+### Session 2026-07-03 (cont.) — Ghost flattened cards + over-eager truncation
+User reported broken cards / spurious newlines. Audited capture.json (data-first):
+capture was structurally complete (first card: image+radius, star SVG, texts,
+glass heart, badge; 20/20 imgs, 76 SVGs, 2/2 rasters; 0 bad newlines) — but two
+real bugs surfaced:
+- **Over-eager truncate:** threshold `textWidth > width-2` marked exactly-fitting
+  text ("Featured" 53px in 53px) as truncate → Figma ellipsized badges ("Featu…").
+  Now requires genuine overflow (`> width+6`); Featured OK, real overflows
+  (Mingalar addr 342>322) still truncate.
+- **Ghost flattened cards (the "new line bug"):** carousel-edge card (x=1432 at a
+  1408 clip boundary) had its CHILDREN dropped by isClippedAway while the wrapper
+  survived on the ±8px tolerance → demote-to-text flattened the card's full
+  innerText into one 3-line ghost node ("Sofitel Spa Dubai Downtown4.9\n…").
+  Added `ancestorVisibleFraction()`; demote-to-text now skipped when the element
+  is <15% visible inside its ancestor clip window. Ghost cards gone; 0 problems.
+
 ---
 
 ## 4. Current status

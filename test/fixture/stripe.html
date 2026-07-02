@@ -177,6 +177,14 @@
         <span>Rotated card with per-corner radius and layered shadows.</span>
       </div>
 
+      <!-- P1: ellipsis text must truncate at box width, not overflow (card-address bug) -->
+      <div style="width:200px;background:#fff;color:#333;padding:6px;margin-top:12px;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        North Podium Tower 2, Dubai Creek Harbour Residences, a very long address line
+      </div>
+      <!-- P2: PUA icon-font glyph in a tiny box → rasterized, not literal text -->
+      <div style="width:24px;height:24px;background:#fff;color:#333;font-size:18px;margin-top:8px;">&#xE001;</div>
+
       <!-- Colour-filter bake: CSS-only (no images) → baked into colours, NOT raster -->
       <div style="display:flex; gap:12px; margin-top:12px;">
         <div style="width:90px;height:50px;background:rgb(60,160,220);filter:grayscale(1);color:#fff;padding:6px;">gray</div>

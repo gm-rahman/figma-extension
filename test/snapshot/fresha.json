@@ -4,7 +4,7 @@
   "mode": "full-page",
   "viewport": {
     "width": 1440,
-    "height": 5738
+    "height": 5760
   },
   "nodes": [
     {
@@ -15,7 +15,7 @@
       "x": 0,
       "y": 0,
       "width": 1440,
-      "height": 5738,
+      "height": 5760,
       "style": {
         "backgroundColor": "rgba(0, 0, 0, 0)",
         "backgroundImage": "none",
@@ -63,7 +63,7 @@
         "overflowY": "visible",
         "backdropFilter": "none",
         "transform": "none",
-        "transformOrigin": "720px 2868.99px",
+        "transformOrigin": "720px 2879.99px",
         "zIndex": "auto",
         "filter": "none"
       },
@@ -190,7 +190,7 @@
                 "filter": "none"
               },
               "children": [],
-              "svgMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 2 102 30.1\"><title>spotlight external gradient shape</title><radialGradient id=\"freshaLogoExtGradient\" cx=\"-8424.306\" cy=\"-8111.145\" r=\"13.573\" fx=\"-8424.306\" fy=\"-8097.771\" gradientTransform=\"matrix(1 -.00367 .00363 .99 8468.848 8014.157)\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".45\" stop-color=\"#7b69ff\"/><stop offset=\".49\" stop-color=\"#7b69ff\" stop-opacity=\".98\"/><stop offset=\".55\" stop-color=\"#7b69ff\" stop-opacity=\".91\"/><stop offset=\".61\" stop-color=\"#7b69ff\" stop-opacity=\".8\"/><stop offset=\".68\" stop-color=\"#7b69ff\" stop-opacity=\".65\"/><stop offset=\".75\" stop-color=\"#7b69ff\" stop-opacity=\".46\"/><stop offset=\".82\" stop-color=\"#7b69ff\" stop-opacity=\".25\"/><stop offset=\".82\" stop-color=\"#7b69ff\" stop-opacity=\".24\"/><stop offset=\".87\" stop-color=\"#7b69ff\" stop-opacity=\".13\"/><stop offset=\".91\" stop-color=\"#7b69ff\" stop-opacity=\"6.000000e-02\"/><stop offset=\".95\" stop-color=\"#7b69ff\" stop-opacity=\"1.000000e-02\"/><stop offset=\"1\" stop-color=\"#7b69ff\" stop-opacity=\"0\"/></radialGradient><circle cx=\"15\" cy=\"15\" r=\"15\" fill=\"url(#frenoiLogoWithSpotlight)\"/></svg>"
+              "svgMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 2 102 30.1\" aria-hidden=\"true\" focusable=\"false\"><radialGradient id=\"freshaLogoExtGradient\" cx=\"-8424.306\" cy=\"-8111.145\" r=\"13.573\" fx=\"-8424.306\" fy=\"-8097.771\" gradientTransform=\"matrix(1 -.00367 .00363 .99 8468.848 8014.157)\" gradientUnits=\"userSpaceOnUse\"><stop offset=\".45\" stop-color=\"#7b69ff\"/><stop offset=\".49\" stop-color=\"#7b69ff\" stop-opacity=\".98\"/><stop offset=\".55\" stop-color=\"#7b69ff\" stop-opacity=\".91\"/><stop offset=\".61\" stop-color=\"#7b69ff\" stop-opacity=\".8\"/><stop offset=\".68\" stop-color=\"#7b69ff\" stop-opacity=\".65\"/><stop offset=\".75\" stop-color=\"#7b69ff\" stop-opacity=\".46\"/><stop offset=\".82\" stop-color=\"#7b69ff\" stop-opacity=\".25\"/><stop offset=\".82\" stop-color=\"#7b69ff\" stop-opacity=\".24\"/><stop offset=\".87\" stop-color=\"#7b69ff\" stop-opacity=\".13\"/><stop offset=\".91\" stop-color=\"#7b69ff\" stop-opacity=\"6.000000e-02\"/><stop offset=\".95\" stop-color=\"#7b69ff\" stop-opacity=\"1.000000e-02\"/><stop offset=\"1\" stop-color=\"#7b69ff\" stop-opacity=\"0\"/></radialGradient><circle cx=\"15\" cy=\"15\" r=\"15\" fill=\"url(#frenoiLogoWithSpotlight)\"/></svg>"
             }
           ]
         },
@@ -202,7 +202,7 @@
           "x": 0,
           "y": 0,
           "width": 1440,
-          "height": 5738,
+          "height": 5760,
           "style": {
             "backgroundColor": "rgb(255, 255, 255)",
             "backgroundImage": "none",
@@ -250,7 +250,7 @@
             "overflowY": "visible",
             "backdropFilter": "none",
             "transform": "none",
-            "transformOrigin": "720px 2868.99px",
+            "transformOrigin": "720px 2879.99px",
             "zIndex": "auto",
             "filter": "none"
           },
@@ -998,7 +998,7 @@
                                       "children": [],
                                       "text": "Log in",
                                       "lines": 1,
-                                      "textWidth": 45
+                                      "textWidth": 44
                                     }
                                   ]
                                 }
@@ -1315,7 +1315,7 @@
                                       "children": [],
                                       "text": "List your business",
                                       "lines": 1,
-                                      "textWidth": 129
+                                      "textWidth": 128
                                     }
                                   ]
                                 }
@@ -1693,7 +1693,7 @@
                                           "children": [],
                                           "text": "Menu",
                                           "lines": 1,
-                                          "textWidth": 42
+                                          "textWidth": 41
                                         }
                                       ]
                                     },
@@ -1906,7 +1906,7 @@
               "x": 0,
               "y": 0,
               "width": 1440,
-              "height": 5392,
+              "height": 5414,
               "style": {
                 "backgroundColor": "rgba(0, 0, 0, 0)",
                 "backgroundImage": "none",
@@ -1954,7 +1954,7 @@
                 "overflowY": "hidden",
                 "backdropFilter": "none",
                 "transform": "none",
-                "transformOrigin": "720px 2695.99px",
+                "transformOrigin": "720px 2706.99px",
                 "zIndex": "auto",
                 "filter": "none"
               },
@@ -2025,8 +2025,8 @@
                       "tagName": "div",
                       "type": "frame",
                       "name": "Container:AnimatedSpotlight_rotation__qxcaJ",
-                      "x": 977,
-                      "y": 83,
+                      "x": 959,
+                      "y": 71,
                       "width": 0,
                       "height": 0,
                       "style": {
@@ -2075,7 +2075,7 @@
                         "overflowX": "visible",
                         "overflowY": "visible",
                         "backdropFilter": "none",
-                        "transform": "matrix3d(0.811391, 0.584503, 0, 0, -0.584503, 0.811391, 0, 0, 0, 0, 1, 0, 0, 0, 100, 1)",
+                        "transform": "matrix3d(0.839628, 0.543162, 0, 0, -0.543162, 0.839628, 0, 0, 0, 0, 1, 0, 0, 0, 100, 1)",
                         "transformOrigin": "0px 440px",
                         "zIndex": "auto",
                         "filter": "none"
@@ -2086,8 +2086,8 @@
                           "tagName": "div",
                           "type": "frame",
                           "name": "Container:AnimatedSpotlight_rotation__qxcaJ",
-                          "x": 95,
-                          "y": 295,
+                          "x": 107,
+                          "y": 264,
                           "width": 0,
                           "height": 0,
                           "style": {
@@ -2136,7 +2136,7 @@
                             "overflowX": "visible",
                             "overflowY": "visible",
                             "backdropFilter": "none",
-                            "transform": "matrix3d(0.843201, 0.537599, 0, 0, -0.537599, 0.843201, 0, 0, 0, 0, 1, 0, 0, 0, 100, 1)",
+                            "transform": "matrix3d(0.867503, 0.497432, 0, 0, -0.497432, 0.867503, 0, 0, 0, 0, 1, 0, 0, 0, 100, 1)",
                             "transformOrigin": "-190px 520px",
                             "zIndex": "auto",
                             "filter": "none"
@@ -2147,10 +2147,10 @@
                               "tagName": "span",
                               "type": "image",
                               "name": "Span:AnimatedSpotlight_spotlight__ugwQm",
-                              "x": -1102,
-                              "y": -300,
-                              "width": 1491,
-                              "height": 1766,
+                              "x": -1090,
+                              "y": -282,
+                              "width": 1583,
+                              "height": 1795,
                               "style": {
                                 "backgroundColor": "rgba(0, 0, 0, 0)",
                                 "backgroundImage": "url(\"https://www.fresha.com/assets/_next/static/media/spotlight1-71dc283cc354f594.svg\")",
@@ -2210,10 +2210,10 @@
                               "tagName": "span",
                               "type": "image",
                               "name": "Span:AnimatedSpotlight_spotlight__ugwQm",
-                              "x": -1209,
-                              "y": -1183,
-                              "width": 2038,
-                              "height": 1720,
+                              "x": -1256,
+                              "y": -1216,
+                              "width": 2071,
+                              "height": 1826,
                               "style": {
                                 "backgroundColor": "rgba(0, 0, 0, 0)",
                                 "backgroundImage": "url(\"https://www.fresha.com/assets/_next/static/media/spotlight2-f48f418ea9fbb67f.svg\")",
@@ -2282,7 +2282,7 @@
                   "x": 0,
                   "y": 0,
                   "width": 1440,
-                  "height": 1974,
+                  "height": 1996,
                   "style": {
                     "backgroundColor": "rgba(0, 0, 0, 0)",
                     "backgroundImage": "none",
@@ -2330,7 +2330,7 @@
                     "overflowY": "visible",
                     "backdropFilter": "none",
                     "transform": "none",
-                    "transformOrigin": "720px 986.984px",
+                    "transformOrigin": "720px 997.984px",
                     "zIndex": "auto",
                     "filter": "none"
                   },
@@ -4735,7 +4735,7 @@
                                 "filter": "none"
                               },
                               "children": [],
-                              "text": "680,390 appointments booked today",
+                              "text": "760,081 appointments booked today",
                               "lines": 1,
                               "textWidth": 374
                             },
@@ -5109,7 +5109,7 @@
                                               "children": [],
                                               "text": "Get the app",
                                               "lines": 1,
-                                              "textWidth": 87
+                                              "textWidth": 86
                                             }
                                           ]
                                         },
@@ -6751,7 +6751,7 @@
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "src": "https://images.fresha.com/locations/location-profile-images/257370/151244/a875a123-c8d2-4276-b19c-c5b6418ba93a.jpg?f_width=384"
+                                                  "src": "https://images.fresha.com/locations/location-profile-images/427938/2093746/9e81d824-86d4-40e7-a57a-4d51791f40ae.jpg?f_width=384"
                                                 }
                                               ]
                                             },
@@ -6877,9 +6877,9 @@
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "text": "Mood Ladies Salon",
+                                                  "text": "Marshals Gents Salon",
                                                   "lines": 1,
-                                                  "textWidth": 136
+                                                  "textWidth": 156
                                                 },
                                                 {
                                                   "id": "node-110",
@@ -7314,7 +7314,7 @@
                                                                 "filter": "none"
                                                               },
                                                               "children": [],
-                                                              "text": "4.8",
+                                                              "text": "5.0",
                                                               "lines": 1,
                                                               "textWidth": 21
                                                             }
@@ -7387,9 +7387,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "North Podium Tower 2, Dubai Creek Harbour Residences, Dubai",
+                                              "text": "Al Barsha South, Dubai",
                                               "lines": 1,
-                                              "textWidth": 395
+                                              "textWidth": 143
                                             },
                                             {
                                               "id": "node-118",
@@ -7452,9 +7452,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Beauty Salon  •  1779 reviews",
+                                              "text": "Barber  •  2039 reviews",
                                               "lines": 1,
-                                              "textWidth": 178
+                                              "textWidth": 142
                                             },
                                             {
                                               "id": "node-119",
@@ -8272,7 +8272,7 @@
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "src": "https://images.fresha.com/locations/location-profile-images/500605/4569070/8508268f-bc4f-4d36-9066-6f0c5a4ebbcb-YouSpaGiliTrawangan-ID-NusaTenggaraoccidental-NusaTenggaraoccidental-Fresha.jpg?f_width=384"
+                                                  "src": "https://images.fresha.com/locations/location-profile-images/138370/4401451/25483ef1-01ff-410d-b28e-58f59dc51931-VersionFrancaisePourElle-AE-Dubai-AlSafaAlSafa2-Fresha.jpg?f_width=384"
                                                 }
                                               ]
                                             },
@@ -8398,9 +8398,9 @@
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "text": "You Spa Gili Trawangan",
+                                                  "text": "Version Francaise Pour Elle",
                                                   "lines": 1,
-                                                  "textWidth": 168
+                                                  "textWidth": 194
                                                 },
                                                 {
                                                   "id": "node-134",
@@ -8835,7 +8835,7 @@
                                                                 "filter": "none"
                                                               },
                                                               "children": [],
-                                                              "text": "4.9",
+                                                              "text": "5.0",
                                                               "lines": 1,
                                                               "textWidth": 21
                                                             }
@@ -8908,9 +8908,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Jalan Kelapa, Gili Trawangan, Pemenang, Nusa Tenggara occidental",
+                                              "text": "Al Safa, Al Safa 2, Dubai",
                                               "lines": 1,
-                                              "textWidth": 417
+                                              "textWidth": 148
                                             },
                                             {
                                               "id": "node-142",
@@ -8973,9 +8973,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Spa & sauna  •  489 reviews",
+                                              "text": "Beauty Salon  •  349 reviews",
                                               "lines": 1,
-                                              "textWidth": 170
+                                              "textWidth": 175
                                             },
                                             {
                                               "id": "node-143",
@@ -9557,7 +9557,7 @@
                                       "x": 716,
                                       "y": 24,
                                       "width": 326,
-                                      "height": 289,
+                                      "height": 311,
                                       "style": {
                                         "backgroundColor": "rgba(0, 0, 0, 0)",
                                         "backgroundImage": "none",
@@ -9605,7 +9605,7 @@
                                         "overflowY": "visible",
                                         "backdropFilter": "none",
                                         "transform": "none",
-                                        "transformOrigin": "163px 144.328px",
+                                        "transformOrigin": "163px 155.328px",
                                         "zIndex": "auto",
                                         "filter": "none"
                                       },
@@ -9618,7 +9618,7 @@
                                           "x": 2,
                                           "y": 2,
                                           "width": 322,
-                                          "height": 285,
+                                          "height": 307,
                                           "style": {
                                             "backgroundColor": "rgba(0, 0, 0, 0)",
                                             "backgroundImage": "none",
@@ -9666,7 +9666,7 @@
                                             "overflowY": "visible",
                                             "backdropFilter": "none",
                                             "transform": "none",
-                                            "transformOrigin": "161px 142.328px",
+                                            "transformOrigin": "161px 153.328px",
                                             "zIndex": "auto",
                                             "filter": "none"
                                           },
@@ -9793,7 +9793,7 @@
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "src": "https://images.fresha.com/locations/location-profile-images/138370/4401451/25483ef1-01ff-410d-b28e-58f59dc51931-VersionFrancaisePourElle-AE-Dubai-AlSafaAlSafa2-Fresha.jpg?f_width=384"
+                                                  "src": "https://images.fresha.com/locations/location-profile-images/2872251/6044325/385881db-9c33-4273-840c-f979ad0c90e3-StyleX-SA-Fresha.jpg?f_width=384"
                                                 }
                                               ]
                                             },
@@ -9805,7 +9805,7 @@
                                               "x": 0,
                                               "y": 223,
                                               "width": 322,
-                                              "height": 22,
+                                              "height": 44,
                                               "style": {
                                                 "backgroundColor": "rgba(0, 0, 0, 0)",
                                                 "backgroundImage": "none",
@@ -9853,7 +9853,7 @@
                                                 "overflowY": "visible",
                                                 "backdropFilter": "none",
                                                 "transform": "none",
-                                                "transformOrigin": "161px 11px",
+                                                "transformOrigin": "161px 22px",
                                                 "zIndex": "auto",
                                                 "filter": "none"
                                               },
@@ -9866,7 +9866,7 @@
                                                   "x": 0,
                                                   "y": 0,
                                                   "width": 278,
-                                                  "height": 22,
+                                                  "height": 44,
                                                   "style": {
                                                     "backgroundColor": "rgba(0, 0, 0, 0)",
                                                     "backgroundImage": "none",
@@ -9914,14 +9914,14 @@
                                                     "overflowY": "visible",
                                                     "backdropFilter": "none",
                                                     "transform": "none",
-                                                    "transformOrigin": "138.844px 11px",
+                                                    "transformOrigin": "138.844px 22px",
                                                     "zIndex": "auto",
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "text": "Version Francaise Pour Elle",
-                                                  "lines": 1,
-                                                  "textWidth": 194
+                                                  "text": "صالون ستايل إكس للحلاقة الرجالية\n| StyleX",
+                                                  "lines": 2,
+                                                  "textWidth": 230
                                                 },
                                                 {
                                                   "id": "node-158",
@@ -10356,7 +10356,7 @@
                                                                 "filter": "none"
                                                               },
                                                               "children": [],
-                                                              "text": "5.0",
+                                                              "text": "4.9",
                                                               "lines": 1,
                                                               "textWidth": 21
                                                             }
@@ -10374,7 +10374,7 @@
                                               "type": "text",
                                               "name": "Paragraph:_-wKgMf",
                                               "x": 0,
-                                              "y": 245,
+                                              "y": 267,
                                               "width": 322,
                                               "height": 20,
                                               "style": {
@@ -10429,9 +10429,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Al Safa, Al Safa 2, Dubai",
+                                              "text": "حي النهضة, بريدة",
                                               "lines": 1,
-                                              "textWidth": 148
+                                              "textWidth": 101
                                             },
                                             {
                                               "id": "node-166",
@@ -10439,7 +10439,7 @@
                                               "type": "text",
                                               "name": "Paragraph:_-wKgMf",
                                               "x": 0,
-                                              "y": 265,
+                                              "y": 287,
                                               "width": 322,
                                               "height": 20,
                                               "style": {
@@ -10494,9 +10494,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Beauty Salon  •  349 reviews",
+                                              "text": "Barber  •  169 reviews",
                                               "lines": 1,
-                                              "textWidth": 175
+                                              "textWidth": 132
                                             },
                                             {
                                               "id": "node-167",
@@ -10506,7 +10506,7 @@
                                               "x": 0,
                                               "y": 0,
                                               "width": 322,
-                                              "height": 285,
+                                              "height": 307,
                                               "style": {
                                                 "backgroundColor": "rgba(0, 0, 0, 0)",
                                                 "backgroundImage": "none",
@@ -10554,7 +10554,7 @@
                                                 "overflowY": "visible",
                                                 "backdropFilter": "none",
                                                 "transform": "none",
-                                                "transformOrigin": "161px 142.328px",
+                                                "transformOrigin": "161px 153.328px",
                                                 "zIndex": "auto",
                                                 "filter": "none"
                                               },
@@ -11314,7 +11314,7 @@
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "src": "https://images.fresha.com/locations/location-profile-images/107662/114559/7d9ac264-5b45-4d34-b503-2b926719caf0.jpg?f_width=384"
+                                                  "src": "https://images.fresha.com/locations/location-profile-images/342190/2087226/a9d473da-58c7-4958-91aa-451e972fd0fa.jpg?f_width=384"
                                                 }
                                               ]
                                             },
@@ -11440,9 +11440,9 @@
                                                     "filter": "none"
                                                   },
                                                   "children": [],
-                                                  "text": "Sofitel Spa Dubai Downtown",
+                                                  "text": "Curve Beauty Salon",
                                                   "lines": 1,
-                                                  "textWidth": 205
+                                                  "textWidth": 142
                                                 },
                                                 {
                                                   "id": "node-182",
@@ -11877,7 +11877,7 @@
                                                                 "filter": "none"
                                                               },
                                                               "children": [],
-                                                              "text": "4.9",
+                                                              "text": "5.0",
                                                               "lines": 1,
                                                               "textWidth": 21
                                                             }
@@ -11950,9 +11950,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Sofitel Dubai Downtown, Sheikh Zayed Rd - Downtown Dubai, Dubai",
+                                              "text": "Dubai Marina, Dubai",
                                               "lines": 1,
-                                              "textWidth": 423
+                                              "textWidth": 125
                                             },
                                             {
                                               "id": "node-190",
@@ -12015,9 +12015,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Spa & sauna  •  1258 reviews",
+                                              "text": "Beauty Salon  •  1418 reviews",
                                               "lines": 1,
-                                              "textWidth": 174
+                                              "textWidth": 175
                                             },
                                             {
                                               "id": "node-191",
@@ -12594,7 +12594,7 @@
                                     {
                                       "id": "node-200",
                                       "tagName": "div",
-                                      "type": "text",
+                                      "type": "frame",
                                       "name": "Container:KIDsoZ",
                                       "x": 1416,
                                       "y": 24,
@@ -12651,10 +12651,7 @@
                                         "zIndex": "auto",
                                         "filter": "none"
                                       },
-                                      "children": [],
-                                      "text": "Cabello Lounge - Jumeirah Park4.9\nCabello Lounge, The Pavilion Jumeirah Park, Dubai\nBarber  •  1777 reviewsFeatured",
-                                      "lines": 3,
-                                      "textWidth": 322
+                                      "children": []
                                     }
                                   ]
                                 },
@@ -13178,7 +13175,7 @@
                       "x": 0,
                       "y": 1127,
                       "width": 1440,
-                      "height": 413,
+                      "height": 435,
                       "style": {
                         "backgroundColor": "rgba(0, 0, 0, 0)",
                         "backgroundImage": "none",
@@ -13226,7 +13223,7 @@
                         "overflowY": "visible",
                         "backdropFilter": "none",
                         "transform": "none",
-                        "transformOrigin": "720px 206.328px",
+                        "transformOrigin": "720px 217.328px",
                         "zIndex": "auto",
                         "filter": "none"
                       },
@@ -13239,7 +13236,7 @@
                           "x": 0,
                           "y": 0,
                           "width": 1440,
-                          "height": 413,
+                          "height": 435,
                           "style": {
                             "backgroundColor": "rgba(0, 0, 0, 0)",
                             "backgroundImage": "none",
@@ -13287,7 +13284,7 @@
                             "overflowY": "visible",
                             "backdropFilter": "none",
                             "transform": "none",
-                            "transformOrigin": "720px 206.328px",
+                            "transformOrigin": "720px 217.328px",
                             "zIndex": "auto",
                             "filter": "none"
                           },
@@ -13491,7 +13488,7 @@
                               "x": 0,
                               "y": 36,
                               "width": 1440,
-                              "height": 337,
+                              "height": 359,
                               "style": {
                                 "backgroundColor": "rgba(0, 0, 0, 0)",
                                 "backgroundImage": "none",
@@ -13539,7 +13536,7 @@
                                 "overflowY": "visible",
                                 "backdropFilter": "none",
                                 "transform": "none",
-                                "transformOrigin": "720px 168.328px",
+                                "transformOrigin": "720px 179.328px",
                                 "zIndex": "auto",
                                 "filter": "none"
                               },
@@ -14058,7 +14055,7 @@
                                   "x": 16,
                                   "y": 0,
                                   "width": 1408,
-                                  "height": 337,
+                                  "height": 359,
                                   "style": {
                                     "backgroundColor": "rgba(0, 0, 0, 0)",
                                     "backgroundImage": "none",
@@ -14106,7 +14103,7 @@
                                     "overflowY": "hidden",
                                     "backdropFilter": "none",
                                     "transform": "none",
-                                    "transformOrigin": "704px 168.328px",
+                                    "transformOrigin": "704px 179.328px",
                                     "zIndex": "1",
                                     "filter": "none"
                                   },
@@ -16248,7 +16245,7 @@
                                                                 "filter": "none"
                                                               },
                                                               "children": [],
-                                                              "text": "4.9",
+                                                              "text": "5.0",
                                                               "lines": 1,
                                                               "textWidth": 21
                                                             }
@@ -16386,9 +16383,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Beauty Salon  •  37 reviews",
+                                              "text": "Beauty Salon  •  40 reviews",
                                               "lines": 1,
-                                              "textWidth": 164
+                                              "textWidth": 166
                                             },
                                             {
                                               "id": "node-260",
@@ -17716,9 +17713,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Barber  •  91 reviews",
+                                              "text": "Barber  •  93 reviews",
                                               "lines": 1,
-                                              "textWidth": 123
+                                              "textWidth": 126
                                             },
                                             {
                                               "id": "node-281",
@@ -19046,7 +19043,7 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Barber  •  15 reviews",
+                                              "text": "Barber  •  16 reviews",
                                               "lines": 1,
                                               "textWidth": 123
                                             },
@@ -19434,7 +19431,7 @@
                                     {
                                       "id": "node-308",
                                       "tagName": "div",
-                                      "type": "text",
+                                      "type": "frame",
                                       "name": "Container:KIDsoZ",
                                       "x": 1416,
                                       "y": 24,
@@ -19491,10 +19488,7 @@
                                         "zIndex": "auto",
                                         "filter": "none"
                                       },
-                                      "children": [],
-                                      "text": "Peach Perfect Waxing4.8\nJhamsikhel Marg, Lalitpur\nWaxing Salon  •  175 reviews",
-                                      "lines": 3,
-                                      "textWidth": 322
+                                      "children": []
                                     }
                                   ]
                                 },
@@ -20016,7 +20010,7 @@
                       "type": "frame",
                       "name": "Container",
                       "x": 0,
-                      "y": 1539,
+                      "y": 1561,
                       "width": 1440,
                       "height": 435,
                       "style": {
@@ -21896,9 +21890,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Barber  •  825 reviews",
+                                              "text": "Barber  •  827 reviews",
                                               "lines": 1,
-                                              "textWidth": 134
+                                              "textWidth": 133
                                             },
                                             {
                                               "id": "node-347",
@@ -23226,9 +23220,9 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Hair Salon  •  50 reviews",
+                                              "text": "Hair Salon  •  51 reviews",
                                               "lines": 1,
-                                              "textWidth": 147
+                                              "textWidth": 143
                                             },
                                             {
                                               "id": "node-368",
@@ -24493,7 +24487,8 @@
                                               "children": [],
                                               "text": "No.71 , Mingalar Street; San Chaung Township , Yangon",
                                               "lines": 1,
-                                              "textWidth": 342
+                                              "textWidth": 322,
+                                              "truncate": true
                                             },
                                             {
                                               "id": "node-388",
@@ -25886,7 +25881,7 @@
                                                 "filter": "none"
                                               },
                                               "children": [],
-                                              "text": "Spa & sauna  •  898 reviews",
+                                              "text": "Spa & sauna  •  900 reviews",
                                               "lines": 1,
                                               "textWidth": 170
                                             },
@@ -26274,7 +26269,7 @@
                                     {
                                       "id": "node-416",
                                       "tagName": "div",
-                                      "type": "text",
+                                      "type": "frame",
                                       "name": "Container:KIDsoZ",
                                       "x": 1416,
                                       "y": 24,
@@ -26331,10 +26326,7 @@
                                         "zIndex": "auto",
                                         "filter": "none"
                                       },
-                                      "children": [],
-                                      "text": "Barberlogy Barbershop - Shinsawpu4.8\n77E, Shin Saw Pu Road, Sanchaung Township, Yango\nBarber  •  137 reviews",
-                                      "lines": 3,
-                                      "textWidth": 327
+                                      "children": []
                                     }
                                   ]
                                 },
@@ -26858,7 +26850,7 @@
                   "type": "frame",
                   "name": "Container:Section_self__25TmV",
                   "x": 0,
-                  "y": 1974,
+                  "y": 1996,
                   "width": 1440,
                   "height": 810,
                   "style": {
@@ -28189,7 +28181,7 @@
                   "type": "frame",
                   "name": "Container:Section_self__25TmV",
                   "x": 0,
-                  "y": 2784,
+                  "y": 2806,
                   "width": 1440,
                   "height": 542,
                   "style": {
@@ -34716,7 +34708,7 @@
                   "type": "frame",
                   "name": "Container:Section_self__25TmV",
                   "x": 0,
-                  "y": 3326,
+                  "y": 3348,
                   "width": 1440,
                   "height": 660,
                   "style": {
@@ -34907,7 +34899,7 @@
                   "type": "frame",
                   "name": "Container:Section_self__25TmV",
                   "x": 0,
-                  "y": 3986,
+                  "y": 4008,
                   "width": 1440,
                   "height": 728,
                   "style": {
@@ -37311,7 +37303,7 @@
                   "type": "frame",
                   "name": "Container:Section_self__25TmV",
                   "x": 0,
-                  "y": 4714,
+                  "y": 4736,
                   "width": 1440,
                   "height": 562,
                   "style": {
@@ -44304,7 +44296,7 @@
                   "type": "frame",
                   "name": "Container:Section_self__25TmV",
                   "x": 0,
-                  "y": 5276,
+                  "y": 5298,
                   "width": 1440,
                   "height": 116,
                   "style": {
@@ -45485,7 +45477,7 @@
                                               "children": [],
                                               "text": "Nail Salons",
                                               "lines": 1,
-                                              "textWidth": 69
+                                              "textWidth": 68
                                             }
                                           ]
                                         }
@@ -45802,7 +45794,7 @@
                                               "children": [],
                                               "text": "Hair Salons",
                                               "lines": 1,
-                                              "textWidth": 71
+                                              "textWidth": 70
                                             }
                                           ]
                                         }
@@ -46119,7 +46111,7 @@
                                               "children": [],
                                               "text": "Massages",
                                               "lines": 1,
-                                              "textWidth": 63
+                                              "textWidth": 62
                                             }
                                           ]
                                         }
@@ -48021,7 +48013,7 @@
                                               "children": [],
                                               "text": "Tattooing & Piercing",
                                               "lines": 1,
-                                              "textWidth": 127
+                                              "textWidth": 126
                                             }
                                           ]
                                         }
@@ -48156,7 +48148,7 @@
                                     {
                                       "id": "node-759",
                                       "tagName": "div",
-                                      "type": "text",
+                                      "type": "frame",
                                       "name": "Container:d_inline-flex",
                                       "x": 0,
                                       "y": 0,
@@ -48213,10 +48205,7 @@
                                         "zIndex": "auto",
                                         "filter": "none"
                                       },
-                                      "children": [],
-                                      "text": "Fitness & Recovery",
-                                      "lines": 2,
-                                      "textWidth": 119
+                                      "children": []
                                     }
                                   ]
                                 }
@@ -48236,7 +48225,7 @@
               "type": "frame",
               "name": "Container",
               "x": 0,
-              "y": 5392,
+              "y": 5414,
               "width": 1440,
               "height": 346,
               "style": {
@@ -49033,7 +49022,7 @@
                                               "children": [],
                                               "text": "Get the app",
                                               "lines": 1,
-                                              "textWidth": 87
+                                              "textWidth": 86
                                             }
                                           ]
                                         },
@@ -54709,7 +54698,7 @@
       "type": "frame",
       "name": "Container",
       "x": 0,
-      "y": 5738,
+      "y": 5760,
       "width": 0,
       "height": 0,
       "style": {
@@ -54771,7 +54760,7 @@
       "type": "frame",
       "name": "Container",
       "x": 0,
-      "y": 5738,
+      "y": 5760,
       "width": 1440,
       "height": 0,
       "style": {

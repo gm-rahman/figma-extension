@@ -47,7 +47,7 @@ function styleFromNode(n) {
   css.push(`top:${n.y}px`);
   // Text: width:auto (hug content) so baked '\n' breaks render exactly and
   // nothing clips; centering is anchored by visualX. Non-text uses captured width.
-  if (n.type === 'text') {
+  if (n.type === 'text' && !n.truncate) {
     css.push(`height:${n.height}px`);
   } else {
     css.push(`width:${visualW}px`);
@@ -84,11 +84,17 @@ function styleFromNode(n) {
     if (s.lineHeight)    css.push(`line-height:${s.lineHeight}`);
     if (s.letterSpacing) css.push(`letter-spacing:${s.letterSpacing}`);
     if (s.textAlign)     css.push(`text-align:${s.textAlign}`);
-    // Both single- and multi-line mirror Figma WIDTH_AND_HEIGHT now: the capture
-    // baked hard '\n' breaks into multi-line text, so we honour them with pre and
-    // never auto-wrap. Size to content so nothing clips.
-    css.push('white-space:pre');
-    css.push('overflow:visible');
+    if (n.truncate) {
+      // CSS ellipsis text: clip at the captured width like the browser/Figma.
+      css.push('white-space:nowrap');
+      css.push('overflow:hidden');
+      css.push('text-overflow:ellipsis');
+    } else {
+      // Both single- and multi-line mirror Figma WIDTH_AND_HEIGHT: baked '\n'
+      // breaks are honoured with pre, never auto-wrap, size to content.
+      css.push('white-space:pre');
+      css.push('overflow:visible');
+    }
   }
   return css.join(';');
 }

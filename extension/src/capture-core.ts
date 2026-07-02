@@ -328,6 +328,20 @@ function rasterizeReason(el: Element, s: CSSStyleDeclaration): string {
       const mask = ps.maskImage || (ps as any).webkitMaskImage;
       if (mask && mask !== 'none') return `${pe} mask icon`;
     }
+    // Icon-FONT glyph: 1-2 chars in a tiny box, drawn with a custom glyph font
+    // (arrows/hearts as font characters). Figma lacks the font → would render a
+    // literal letter ("P"). Screenshot the glyph instead. Common text fonts are
+    // whitelisted so ratings/initials stay as editable text.
+    if (el.childElementCount === 0) {
+      const txt = ((el as HTMLElement).innerText || '').trim();
+      if (txt.length >= 1 && txt.length <= 2) {
+        const pua = [...txt].some(ch => { const c = ch.codePointAt(0)!; return c >= 0xe000 && c <= 0xf8ff; });
+        const fam = (s.fontFamily || '').split(',')[0].trim().replace(/['"]/g, '').toLowerCase();
+        const commonFont = /^(arial|helvetica|inter|roboto|segoe|times|georgia|verdana|tahoma|courier|menlo|monaco|consolas|system-ui|-apple-system|blinkmacsystemfont|sf pro|noto|open sans|lato|montserrat|poppins|source|ibm plex|roobert|graphik|circular|gt |suisse|founders|basier|sans-serif|serif|monospace|ui-)/;
+        if (pua || (fam && !commonFont.test(fam) && /icon|glyph|awesome|material|symbol|feather|remix|boxicons|ionicons/.test(fam)))
+          return 'icon-font glyph';
+      }
+    }
   }
 
   return '';
@@ -424,6 +438,31 @@ function hasClippedOverflow(el: Element): boolean {
 // isn't bloated with hundreds of off-canvas nodes). Clipping is applied PER-AXIS
 // so an element that legitimately overflows a `visible` axis is never dropped.
 const OFFSCREEN_TOL = 8;
+
+// Fraction of `rect` visible inside the accumulated ancestor clip window (0..1).
+// 1 when nothing clips. Used to stop demote-to-text from resurrecting carousel
+// cards that sit at the clip edge: their children get dropped as clipped-away,
+// then the wrapper (kept on boundary tolerance) flattened its whole innerText
+// into one multi-line ghost text node.
+function ancestorVisibleFraction(el: Element, rect: DOMRect): number {
+  let left = -Infinity, top = -Infinity, right = Infinity, bottom = Infinity, clipped = false;
+  let a = el.parentElement;
+  for (let g = 0; a && g < 100; g++, a = a.parentElement) {
+    const cs = window.getComputedStyle(a);
+    const clipsX = cs.overflowX && cs.overflowX !== 'visible';
+    const clipsY = cs.overflowY && cs.overflowY !== 'visible';
+    if (clipsX || clipsY) {
+      const b = a.getBoundingClientRect();
+      if (clipsX) { left = Math.max(left, b.left); right = Math.min(right, b.right); clipped = true; }
+      if (clipsY) { top = Math.max(top, b.top); bottom = Math.min(bottom, b.bottom); clipped = true; }
+    }
+  }
+  if (!clipped || rect.width <= 0 || rect.height <= 0) return 1;
+  const ix = Math.max(0, Math.min(rect.right, right) - Math.max(rect.left, left));
+  const iy = Math.max(0, Math.min(rect.bottom, bottom) - Math.max(rect.top, top));
+  return (ix * iy) / (rect.width * rect.height);
+}
+
 function isClippedAway(el: Element, rect: DOMRect): boolean {
   const pos = window.getComputedStyle(el).position;
   if (pos === 'fixed') return false;           // escapes overflow clipping
@@ -822,8 +861,11 @@ function makeLeafTextChild(el: Element, rect: DOMRect, s: CSSStyleDeclaration): 
   const padL  = parseFloat(s.paddingLeft) || 0;
   const padR  = parseFloat(s.paddingRight) || 0;
   const lh    = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2 || 16;
-  const clipped = hasClippedOverflow(el);
+  // CSS ellipsis on a styled leaf (bg/border box): full string, clipped visually.
+  const ellipsis = s.textOverflow === 'ellipsis' && s.whiteSpace === 'nowrap';
+  const clipped = !ellipsis && hasClippedOverflow(el);
   const m     = clipped ? measureClipped(el) : { ...measureText(el), text: '' };
+  if (ellipsis) m.lines = 1;
   const text  = clipped
     ? (m as { text: string }).text
     : (m.lines > 1 ? getWrappedText(el) : ((el as HTMLElement).innerText?.trim().slice(0, 1000) ?? ''));
@@ -842,7 +884,8 @@ function makeLeafTextChild(el: Element, rect: DOMRect, s: CSSStyleDeclaration): 
     style,
     text,
     lines: m.lines,
-    textWidth: m.textWidth,
+    textWidth: ellipsis ? Math.min(m.textWidth, Math.round(rect.width - padL - padR)) : m.textWidth,
+    truncate: ellipsis && m.textWidth > rect.width - padL - padR + 6 ? true : undefined,
     children: [],
   };
 }
@@ -1064,7 +1107,18 @@ function serializeElement(
   }
 
   if (type === 'text') {
-    if (hasClippedOverflow(el)) {
+    // CSS ellipsis: the element shows a clipped line but innerText is the FULL
+    // string — rendering it auto-hug would overflow and overlap neighbours (the
+    // card-address bug). Mark for Figma textTruncation:'ENDING' at box width.
+    if (s.textOverflow === 'ellipsis' && s.whiteSpace === 'nowrap') {
+      const m = measureText(el);
+      node.text      = (el as HTMLElement).innerText?.trim().slice(0, 1000) ?? '';
+      node.lines     = 1;
+      node.textWidth = Math.min(m.textWidth, Math.round(rect.width));
+      // Only truncate on GENUINE overflow (+6px) — text that exactly fits must
+      // stay auto-hug, or Figma's font metrics ellipsize it ("Featured"→"Featu…").
+      if (m.textWidth > rect.width + 6) node.truncate = true;
+    } else if (hasClippedOverflow(el)) {
       // Clipped subtree (odometer/marquee/line-clamp): measure only visible text.
       const m = measureClipped(el);
       node.text = m.text; node.lines = m.lines; node.textWidth = m.textWidth;
@@ -1159,8 +1213,11 @@ function serializeElement(
       // e.g. <button><span>G</span> Continue with Google</button>. Children using
       // `display:contents` are hoisted (they generate no box of their own).
       appendChildNodes(node, el, docX, docY, depth);
-      // Frame with no captured children but its own text → demote to text
-      if (node.children.length === 0) {
+      // Frame with no captured children but its own text → demote to text.
+      // BUT never for a mostly-clipped element (carousel-edge card): its children
+      // were dropped as clipped-away, and demoting would flatten the card's full
+      // innerText into one ghost multi-line text node.
+      if (node.children.length === 0 && ancestorVisibleFraction(el, rect) >= 0.15) {
         const txt = (el as HTMLElement).innerText?.trim().slice(0, 1000) ?? '';
         if (txt) {
           node.type = 'text';
