@@ -18,6 +18,9 @@ export interface ElementStyle {
   display: string;
   overflowX: string;
   overflowY: string;
+  backgroundClip?: string;
+  webkitBackgroundClip?: string;
+  webkitTextFillColor?: string;
 }
 
 export interface CaptureNode {

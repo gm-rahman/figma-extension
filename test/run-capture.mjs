@@ -138,8 +138,16 @@ await page.evaluate(() => {
   for (const el of document.querySelectorAll('*')) {
     const cs = getComputedStyle(el);
     if (parseFloat(cs.opacity) === 0 && /opacity|all/.test(cs.transitionProperty)) {
-      el.style.setProperty('opacity', '1', 'important');
+      // Stylesheet + attribute (not inline style): React re-renders clobber the
+      // style attribute mid-capture (map-phone race); attributes survive.
+      el.setAttribute('data-h2f-reveal', '');
     }
+  }
+  if (document.querySelector('[data-h2f-reveal]') && !document.getElementById('__h2f_reveal')) {
+    const st = document.createElement('style');
+    st.id = '__h2f_reveal';
+    st.textContent = '[data-h2f-reveal]{opacity:1 !important;transition:none !important;}';
+    document.head.appendChild(st);
   }
 });
 
@@ -216,6 +224,10 @@ await browser.close();
 // ── write capture.json + summary ─────────────────────────────────────────────
 
 const outPath = resolve(__dirname, 'capture.json');
+// Record the browser viewport too — CSS vh/vw units resolve against THIS,
+// not the full document. Required for vh/vw → px conversion when rendering
+// previews or building Figma gradients.
+payload.browserViewport = { width: viewportW, height: viewportH };
 writeFileSync(outPath, JSON.stringify(payload, null, 2));
 
 let total = 0;

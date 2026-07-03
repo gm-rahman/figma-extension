@@ -54,6 +54,7 @@ function baseStyle(): ElementStyle {
     borderRadius: '0px', borderTopLeftRadius: '0px', borderTopRightRadius: '0px',
     borderBottomRightRadius: '0px', borderBottomLeftRadius: '0px',
     borderColor: 'rgb(218, 220, 224)', borderWidth: '0px', borderStyle: 'none',
+    outlineStyle: 'none', outlineWidth: '0px', outlineColor: 'rgb(0, 0, 0)',
     paddingTop: '0px', paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px',
     marginTop: '0px', marginRight: '0px', marginBottom: '0px', marginLeft: '0px',
     boxShadow: 'none', opacity: '1', display: 'block', position: 'static',

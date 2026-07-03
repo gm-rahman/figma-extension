@@ -20,6 +20,9 @@ export interface ElementStyle {
   borderColor: string;
   borderWidth: string;
   borderStyle: string;
+  outlineStyle: string;
+  outlineWidth: string;
+  outlineColor: string;
   paddingTop: string;
   paddingRight: string;
   paddingBottom: string;
@@ -61,6 +64,15 @@ export interface ElementStyle {
   /** CSS filter on the element. blur()/drop-shadow() → Figma LAYER_BLUR/DROP_SHADOW;
    *  other functions (hue-rotate, contrast…) trigger rasterization instead. */
   filter: string;
+  /** `background-clip` value (e.g. 'border-box' | 'text'). Required to detect
+   *  Fresha's "gradient text" pattern: parent gradient + child `bgClip:text` +
+   *  child transparent text → render text in the parent gradient. */
+  backgroundClip?: string;
+  /** WebKit-specific `background-clip` (legacy alias). */
+  webkitBackgroundClip?: string;
+  /** `-webkit-text-fill-color` value — when transparent, text colour is
+   *  supplied by `background-clip: text` + a gradient. */
+  webkitTextFillColor?: string;
 }
 
 export interface CaptureNode {

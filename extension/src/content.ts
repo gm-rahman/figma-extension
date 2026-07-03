@@ -128,7 +128,8 @@ async function captureAndSend(mode: 'full-page') {
 
   // Undo our DOM side-effects: restore scroll and remove forced opacity overrides
   // (the page's own reveal observers keep anything that legitimately became visible).
-  for (const el of revealed) el.style.removeProperty('opacity');
+  for (const el of revealed) el.removeAttribute('data-h2f-reveal');
+  document.getElementById('__h2f_reveal')?.remove();
   window.scrollTo(savedX, savedY); // restore
 
   progress('saving', 'Saving capture…');
@@ -162,11 +163,19 @@ async function prepareDomForCapture(): Promise<HTMLElement[]> {
   // fade-in-on-view widgets sit at opacity:0 until an IntersectionObserver adds a
   // class, and a quick programmatic scroll can miss the observer threshold —
   // leaving product imagery invisible (and dropped by the capture).
+  // Reveal via a stylesheet + data attribute, NOT inline styles: React re-renders
+  // overwrite the style attribute mid-capture (the staggered app-phone <picture>
+  // lost its forced opacity that way and was dropped), but unknown attributes
+  // survive re-renders. transition:none defeats staggered reveal delays.
+  const revealSheet = document.createElement('style');
+  revealSheet.id = '__h2f_reveal';
+  revealSheet.textContent = '[data-h2f-reveal]{opacity:1 !important;transition:none !important;}';
+  document.head.appendChild(revealSheet);
   const revealed: HTMLElement[] = [];
   for (const el of Array.from(document.querySelectorAll<HTMLElement>('*'))) {
     const cs = getComputedStyle(el);
     if (parseFloat(cs.opacity) === 0 && /opacity|all/.test(cs.transitionProperty)) {
-      el.style.setProperty('opacity', '1', 'important');
+      el.setAttribute('data-h2f-reveal', '');
       revealed.push(el);
     }
   }
@@ -268,6 +277,14 @@ chrome.runtime.onMessage.addListener((msg: MessageToContent | { type: 'PING' }, 
           width: window.innerWidth,
           height: document.documentElement.scrollHeight,
         };
+        // Record the **browser viewport** size too — CSS vh/vw units are
+        // relative to the actual browser viewport, NOT the full document.
+        // Without this, gradient stops like `radial-gradient(circle, red 20vh, ...)`
+        // resolve against the page height and end up outside the visible bounds.
+        payload.browserViewport = {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        };
         // Rasterize this viewport's Figma-impossible elements (video, clip-path,
         // conic, etc.) too — the emulated viewport is what captureVisibleTab grabs.
         const rasterImages = await rasterizeFlaggedElements();
@@ -275,7 +292,8 @@ chrome.runtime.onMessage.addListener((msg: MessageToContent | { type: 'PING' }, 
           payload.images = { ...(payload.images ?? {}), ...rasterImages };
         }
         cleanupRasterTags();
-        for (const el of revealed) el.style.removeProperty('opacity');
+        for (const el of revealed) el.removeAttribute('data-h2f-reveal');
+  document.getElementById('__h2f_reveal')?.remove();
         window.scrollTo(savedX, savedY);
         sendResponse({ ok: true, payload });
       } catch (err) {

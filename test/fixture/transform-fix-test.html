@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html><head><style>
+  body { margin:0; padding:50px; font-family:sans-serif; }
+  .case { border: 2px dashed #888; padding: 12px; margin-bottom: 30px; }
+  .case .label { font-weight: bold; color: #444; margin-bottom: 8px; font-size: 14px; }
+  .parent {
+    position: relative;
+    width: 500px;
+    height: 200px;
+    border: 1px solid #888;
+    background: #efe;
+  }
+  /* Case A: pure translate on a child div */
+  .case-a .child {
+    position: absolute; left: 50px; top: 30px;
+    width: 100px; height: 60px;
+    background: #4af;
+    transform: translate(0, 50px);
+    transform-origin: 50px 30px;
+  }
+  /* Case B: only rotation (no translation) */
+  .case-b .child {
+    position: absolute; left: 200px; top: 30px;
+    width: 60px; height: 60px;
+    background: #fa4;
+    transform: rotate(45deg);
+    transform-origin: 30px 30px;
+  }
+  /* Case C: scale only (no translation) */
+  .case-c .child {
+    position: absolute; left: 320px; top: 30px;
+    width: 60px; height: 60px;
+    background: #4fa;
+    transform: scale(1.5);
+    transform-origin: 30px 30px;
+  }
+  /* Case D: real Fresha-style — picture element with translateY(50) holding an image */
+  .case-d .parent {
+    height: 300px;
+    background: #fff8e0;
+  }
+  .case-d picture {
+    position: absolute;
+    left: 50px;
+    top: 0;
+    transform: translate(0, 50px);
+    transform-origin: 150px 150px;
+    display: block;
+  }
+  .case-d img {
+    display: block;
+    width: 300px;
+    height: 300px;
+    background: linear-gradient(135deg, #ff6b9d, #8a4bff);
+  }
+</style></head><body>
+
+<div class="case case-a">
+  <div class="label">A) translate(0, 50px) on a div — visual y = 30 + 50 = 80</div>
+  <div class="parent">
+    <div class="child"></div>
+  </div>
+</div>
+
+<div class="case case-b">
+  <div class="label">B) rotate(45deg) — no translation; bounding rect already post-rotation</div>
+  <div class="parent">
+    <div class="child"></div>
+  </div>
+</div>
+
+<div class="case case-c">
+  <div class="label">C) scale(1.5) — no translation; bounding rect already post-scale</div>
+  <div class="parent">
+    <div class="child"></div>
+  </div>
+</div>
+
+<div class="case case-d">
+  <div class="label">D) Fresha-style — picture { translate(0, 50px) } wraps an img</div>
+  <div class="parent">
+    <picture>
+      <img />
+    </picture>
+  </div>
+</div>
+
+</body></html>

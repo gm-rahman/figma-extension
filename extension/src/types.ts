@@ -20,6 +20,9 @@ export interface ElementStyle {
   borderColor: string;
   borderWidth: string;
   borderStyle: string;
+  outlineStyle: string;
+  outlineWidth: string;
+  outlineColor: string;
   paddingTop: string;
   paddingRight: string;
   paddingBottom: string;
@@ -61,6 +64,15 @@ export interface ElementStyle {
   /** CSS filter on the element. blur()/drop-shadow() → Figma LAYER_BLUR/DROP_SHADOW;
    *  other functions (hue-rotate, contrast…) trigger rasterization instead. */
   filter: string;
+  /** `background-clip` value (e.g. 'border-box' | 'text'). Required to detect
+   *  Fresha's "gradient text" pattern: parent gradient + child `bgClip:text` +
+   *  child transparent text → render text in the parent gradient. */
+  backgroundClip?: string;
+  /** WebKit-specific `background-clip` (legacy alias). */
+  webkitBackgroundClip?: string;
+  /** `-webkit-text-fill-color` value — when 'rgba(0,0,0,0)' or 'transparent',
+   *  the text colour is supplied by `background-clip: text` + a gradient. */
+  webkitTextFillColor?: string;
 }
 
 export interface CaptureNode {
@@ -100,7 +112,13 @@ export interface CapturePayload {
   url: string;
   title: string;
   mode: 'full-page' | 'selected-element';
+  // `viewport` is the **full document** size (used for canvas sizing).
+  // `browserViewport` is the **actual browser viewport** at capture time —
+  // required to resolve CSS vh/vw units (which are relative to the browser
+  // viewport, not the document). Older payloads without it fall back to
+  // `viewport`.
   viewport: { width: number; height: number };
+  browserViewport?: { width: number; height: number };
   nodes: CaptureNode[];
   images?: Record<string, string>;
 }

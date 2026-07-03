@@ -49,6 +49,24 @@ function extractBgImageUrl(bgImage: string): string | undefined {
   return undefined;
 }
 
+// CSS transform matrices carry translation in their (e, f) coefficients.
+// `getBoundingClientRect()` returns coordinates AFTER applying the transform,
+// so the captured x/y already include any translate. Storing the translation
+// in `style.transform` as well would cause renderers to translate twice —
+// e.g. Fresha's `<picture translateY(50px)>` would land 50px too low.
+// Strip (e, f) but keep the linear (a, b, c, d) so rotation/scale/skew render
+// correctly; identity matrices become `none`.
+function stripMatrixTranslation(transform: string): string {
+  if (!transform || transform === 'none') return 'none';
+  const m = transform.match(/^matrix\(\s*([^)]+)\)$/);
+  if (!m) return transform;                       // matrix3d or shorthand — leave alone
+  const p = m[1].split(',').map(v => parseFloat(v.trim()));
+  if (p.length < 6 || p.some(v => !Number.isFinite(v))) return transform;
+  const [a, b, c, d] = p;
+  if (a === 1 && b === 0 && c === 0 && d === 1) return 'none';
+  return `matrix(${a}, ${b}, ${c}, ${d}, 0, 0)`;
+}
+
 function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
   const bgImage = s.backgroundImage;
   return {
@@ -70,6 +88,9 @@ function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
     borderColor:        s.borderColor,
     borderWidth:        s.borderWidth,
     borderStyle:        s.borderStyle,
+    outlineStyle:       s.outlineStyle,
+    outlineWidth:       s.outlineWidth,
+    outlineColor:       s.outlineColor,
     paddingTop:         s.paddingTop,
     paddingRight:       s.paddingRight,
     paddingBottom:      s.paddingBottom,
@@ -98,7 +119,21 @@ function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
     overflowX:          s.overflowX,
     overflowY:          s.overflowY,
     backdropFilter:     (s as any).backdropFilter || (s as any).webkitBackdropFilter || 'none',
-    transform:          s.transform || 'none',
+    // Fresha's "gradient text" pattern paints an element's text in the parent
+    // gradient's colour by combining `background-clip: text` with
+    // `-webkit-text-fill-color: transparent`. The standard `color` property
+    // is masked by text-fill-color, so we capture both — the Figma plugin can
+    // detect the transparent fill + parent gradient and apply a gradient
+    // text paint.
+    backgroundClip:     (s as any).backgroundClip || 'none',
+    webkitBackgroundClip: (s as any).webkitBackgroundClip || 'none',
+    webkitTextFillColor: (s as any).webkitTextFillColor || s.color || 'rgb(0,0,0)',
+    // Strip the (e, f) translation from the transform matrix — see
+    // stripMatrixTranslation above. The captured x/y already include the
+    // post-transform offset (getBoundingClientRect is post-transform), so
+    // re-applying translation in the renderer would double-shift the element
+    // (e.g. Fresha's `<picture translateY(50px)>` rendered 50px too low).
+    transform:          stripMatrixTranslation(s.transform || 'none'),
     transformOrigin:    s.transformOrigin || '50% 50%',
     zIndex:             s.zIndex || 'auto',
     filter:             s.filter || 'none',
@@ -132,6 +167,8 @@ function stripBoxDecoration(s: ElementStyle): ElementStyle {
     borderStyle:             'none',
     borderWidth:             '0px',
     borderColor:             'rgb(0, 0, 0)',
+    outlineStyle:            'none',
+    outlineWidth:            '0px',
     boxShadow:               'none',
     backdropFilter:          'none',
     borderRadius:            '0px',
@@ -306,7 +343,21 @@ function rasterizeReason(el: Element, s: CSSStyleDeclaration): string {
   if (s.mixBlendMode && anyNonNormal(s.mixBlendMode))         return `mix-blend-mode: ${s.mixBlendMode}`;
   if (s.backgroundBlendMode && anyNonNormal(s.backgroundBlendMode))
                                                        return `background-blend-mode: ${s.backgroundBlendMode}`;
-  if ((s as any).backgroundClip === 'text' || (s as any).webkitBackgroundClip === 'text')
+  // background-clip:text tints TEXT with the element's background. Rasterize the
+  // text element itself (may contain spans — "1 billion+" is not a leaf), but
+  // never tall containers/sections (FreshaInNumbers 1440×660 flattened whole).
+  // EXCEPTION: when the element has NO own background-image, the tint comes
+  // from a parent gradient (CSS cascade trick — Fresha's `.gradient-animation`
+  // pattern: parent has the gradient, child has bgClip:text + bgImage:none +
+  // transparent text-fill). Keep such elements editable; the Figma plugin
+  // renders the parent gradient natively and the text falls over it. Rasterizing
+  // here would capture a BLACK-on-PINK or transparent strip that masks the
+  // parent's painted gradient in preview output.
+  const bgClipText = (s as any).backgroundClip === 'text' || (s as any).webkitBackgroundClip === 'text';
+  const bgOwn = s.backgroundImage && s.backgroundImage !== 'none';
+  if (bgClipText && bgOwn
+      && (el as HTMLElement).innerText?.trim() && !subtreeHasRaster(el)
+      && el.getBoundingClientRect().height <= 400)
                                                        return 'background-clip: text';
 
   const bg = s.backgroundImage || '';
@@ -327,6 +378,17 @@ function rasterizeReason(el: Element, s: CSSStyleDeclaration): string {
       if (ps.content === 'none') continue;
       const mask = ps.maskImage || (ps as any).webkitMaskImage;
       if (mask && mask !== 'none') return `${pe} mask icon`;
+      // Icon font via pseudo: `::before { content:'P'; font-family: <icon font> }`
+      // (Fresha's carousel arrows). Rendering that as text gives a literal "P" —
+      // screenshot the whole small control instead.
+      const cm = (ps.content || '').match(/^["'](.{1,2})["']$/);
+      if (cm) {
+        const gl = cm[1];
+        const gpua = [...gl].some(ch => { const c = ch.codePointAt(0)!; return c >= 0xe000 && c <= 0xf8ff; });
+        const gfam = (ps.fontFamily || '').split(',')[0].trim().replace(/['"]/g, '').toLowerCase();
+        const gcommon = /^(arial|helvetica|inter|roboto|segoe|times|georgia|verdana|tahoma|courier|menlo|monaco|consolas|system-ui|-apple-system|blinkmacsystemfont|sf pro|noto|open sans|lato|montserrat|poppins|source|ibm plex|roobert|graphik|circular|gt |suisse|founders|basier|sans-serif|serif|monospace|ui-)/;
+        if (gpua || (gfam && !gcommon.test(gfam))) return `${pe} icon-font glyph`;
+      }
     }
     // Icon-FONT glyph: 1-2 chars in a tiny box, drawn with a custom glyph font
     // (arrows/hearts as font characters). Figma lacks the font → would render a
@@ -338,7 +400,10 @@ function rasterizeReason(el: Element, s: CSSStyleDeclaration): string {
         const pua = [...txt].some(ch => { const c = ch.codePointAt(0)!; return c >= 0xe000 && c <= 0xf8ff; });
         const fam = (s.fontFamily || '').split(',')[0].trim().replace(/['"]/g, '').toLowerCase();
         const commonFont = /^(arial|helvetica|inter|roboto|segoe|times|georgia|verdana|tahoma|courier|menlo|monaco|consolas|system-ui|-apple-system|blinkmacsystemfont|sf pro|noto|open sans|lato|montserrat|poppins|source|ibm plex|roobert|graphik|circular|gt |suisse|founders|basier|sans-serif|serif|monospace|ui-)/;
-        if (pua || (fam && !commonFont.test(fam) && /icon|glyph|awesome|material|symbol|feather|remix|boxicons|ionicons/.test(fam)))
+        // Any single glyph in a tiny box drawn with a NON-standard font is an
+        // icon-font character (Fresha's carousel arrow is a literal "P" in its
+        // icon font). Common text fonts whitelisted so ratings/initials stay text.
+        if (pua || (fam && !commonFont.test(fam)))
           return 'icon-font glyph';
       }
     }
@@ -637,9 +702,17 @@ const TRANSPARENT = /^rgba?\(0,\s*0,\s*0,\s*0\)$|transparent/;
 function hasVisibleBox(s: CSSStyleDeclaration): boolean {
   const hasBg     = !!s.backgroundColor && !TRANSPARENT.test(s.backgroundColor.replace(/\s/g, ''));
   const hasGrad   = s.backgroundImage && s.backgroundImage !== 'none';
-  const hasBorder = s.borderStyle !== 'none' && parseFloat(s.borderWidth) > 0;
-  const hasRadius = parseFloat(s.borderRadius) > 0;
-  return hasBg || !!hasGrad || hasBorder || hasRadius;
+  const hasBorder  = s.borderStyle !== 'none' && parseFloat(s.borderWidth) > 0;
+  const hasRadius  = parseFloat(s.borderRadius) > 0;
+  // A shadow only makes the box visible if at least one of its colours is
+  // non-transparent — sr-only 1×1 spans carry `rgba(0,0,0,0) 0 0 …` shadows and
+  // were wrongly kept (rendering stray a11y glyphs like the carousel "P").
+  const hasShadow  = !!s.boxShadow && s.boxShadow !== 'none' &&
+    (s.boxShadow.match(/rgba?\([^)]+\)|#[0-9a-fA-F]{3,8}/g) || [])
+      .some(c => !/^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0\s*\)$/.test(c));
+  const hasOutline = s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0
+    && !TRANSPARENT.test((s.outlineColor || '').replace(/\s/g, ''));
+  return hasBg || !!hasGrad || hasBorder || hasRadius || hasShadow || hasOutline;
 }
 
 const INLINE_TAGS = new Set([
@@ -1035,7 +1108,19 @@ function serializeElement(
   const docY   = rect.top  + window.scrollY;
 
   const s = window.getComputedStyle(el);
-  if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return null;
+  if (s.display === 'none' || s.visibility === 'hidden') return null;
+  let forcedVisible = false;
+  if (parseFloat(s.opacity) === 0) {
+    // Crossfade/reveal member: opacity animates via a transition and the element
+    // carries MEDIA (Fresha's app-phone <picture> alternates with its <video> in
+    // a loop — whichever is "off" sits at 0 at serialize time and was dropped).
+    // Capture those visible. Text-only opacity-0 elements (tooltips, menus) stay
+    // dropped — media-bearing is the discriminator.
+    const revealPending = /opacity|all/.test(s.transitionProperty) &&
+      (/^(img|picture|video)$/.test(el.tagName.toLowerCase()) || !!el.querySelector('img,picture,video'));
+    if (!revealPending) return null;
+    forcedVisible = true;
+  }
 
   // Size filter:
   //  • Totally invisible (< 1px in either axis) → always skip
@@ -1071,6 +1156,7 @@ function serializeElement(
     style:  getStyle(el),
     children: [],
   };
+  if (forcedVisible) node.style.opacity = '1';
 
   // Colour-filter bake: apply any inherited colour transform to this node's
   // colours, and if THIS element adds a colour-only filter over an image-free
@@ -1217,7 +1303,11 @@ function serializeElement(
       // BUT never for a mostly-clipped element (carousel-edge card): its children
       // were dropped as clipped-away, and demoting would flatten the card's full
       // innerText into one ghost multi-line text node.
-      if (node.children.length === 0 && ancestorVisibleFraction(el, rect) >= 0.15) {
+      // ALSO never for sub-8px boxes: the sr-only clip pattern (1×1 span holding
+      // a11y text like "P") would otherwise resurrect its hidden text — Figma
+      // auto-hug then paints a stray glyph over the carousel arrow.
+      if (node.children.length === 0 && rect.width >= 8 && rect.height >= 8
+          && ancestorVisibleFraction(el, rect) >= 0.15) {
         const txt = (el as HTMLElement).innerText?.trim().slice(0, 1000) ?? '';
         if (txt) {
           node.type = 'text';

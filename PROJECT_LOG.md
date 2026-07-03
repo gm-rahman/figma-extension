@@ -5,7 +5,7 @@ localhost) and rebuilds it in Figma as **editable** native layers — frames,
 text, vectors, image fills — not screenshots. Goal: match, then beat, the
 commercial "html.to.design" plugin.
 
-Last updated: 2026-06-27
+Last updated: 2026-07-04 (transform-fix)
 
 ---
 
@@ -573,7 +573,323 @@ real bugs surfaced:
   Added `ancestorVisibleFraction()`; demote-to-text now skipped when the element
   is <15% visible inside its ancestor clip window. Ghost cards gone; 0 problems.
 
+### Session 2026-07-04 — Plan 01 executed (card ring · gradient section · crossfade phone)
+Executed plans/01-fidelity-fixes.md (evidence-first; two live-DOM probes):
+- **P1 CSS outline:** `outline{Style,Width,Color}` added to ElementStyle (both
+  copies) + captured; `hasVisibleBox` now also counts box-shadow / visible outline;
+  `stripBoxDecoration` zeroes outline; plugin renders outline as `strokeAlign:
+  'OUTSIDE'` stroke when no border stroke exists (transparent colours skipped).
+  Fixture: "outlined card" div → captured `solid 1px rgb(229,229,229)` ✓. Live
+  finding: Fresha's resting card has NO visible ring (only a transparent focus-ring
+  utility) — outline support is the general win.
+- **P2 background-clip:text leaf-only:** rasterizeReason fires only on text leaves
+  now. FreshaInNumbers (1440×660) no longer rasterizes — native radial gradient +
+  children, "1 billion+" is editable text. Raster count fresha: 1 (video only).
+- **P3 crossfade media (map/app phone):** root cause evolved with evidence —
+  (a) inline-style force-reveal was clobbered by React re-renders → switched
+  reveal to stylesheet + `data-h2f-reveal` attribute (content.ts + harness);
+  (b) the phone `<picture>` CROSSFADES with the `<video>` in a loop, so the "off"
+  member sits at opacity 0 at serialize time regardless of reveal. Serialize gate
+  now keeps opacity-0 elements that have an opacity transition AND carry media
+  (img/picture/video), forcing captured opacity to 1. Text-only opacity-0 elements
+  (tooltips/menus) stay dropped. Phone captured: `<picture> 300×650 embedded ✓`.
+- **P4 multi-fill:** frame bg with BOTH gradient and url() now renders
+  `[IMAGE, gradient]` fills (CSS layer order preserved; Figma last-on-top).
+- Verified: fresha 901 nodes, PROBLEMS 0, snapshots updated (stripe + fresha),
+  extension+plugin build clean, plugin tsc clean (bar DOMRectList noise).
+### Session 2026-07-04 (cont.) — Plan 01 verification sweep (no regressions)
+Re-ran the Phase 5 sweep on `plans/01-fidelity-fixes.md` against the current tree to
+confirm the four fixes still hold after a week of churn:
+- **stripe fixture:** capture 90 nodes, 5 rasters (icon-font glyph, clip-path,
+  conic, filter blur+hue, background-clip:text), snapshot diff 0/0/0. Analyzer
+  reports **0 PROBLEMS, 0 NOTES**. Outline regression fixture
+  (`<div style="outline:1px solid rgb(229,229,229)">outlined card</div>`) captured
+  correctly.
+- **fresha @1440:** 897 nodes, **5 rasters** — only the `<video>` phone + 4
+  `background-clip:text` heading leaves. `FreshaInNumbers` (1440×660) renders
+  natively with `GRADIENT default stops:3` (radial pink) and editable children;
+  `DownloadApp_center-images` has both members (300×650 `<picture>` with src, and
+  the 246×529 `<video>` raster). Analyzer **0 PROBLEMS, 0 NOTES**. Snapshot
+  deltas all explained by live-page rotation (animated spotlight transforms),
+  counter ticks (628,143 → 677,908 appointments), and carousel shuffling — not
+  capture regressions. `--update-snapshot` accepted.
+- **Builds:** `extension npm run build` clean (`dist/popup.js 3.24kB`,
+  `dist/background.js 7.11kB`, `dist/content.js 33.83kB`). `figma-plugin npm run
+  build` clean (`dist/plugin.js 26.9kB`, `dist/ui-bundle.js 5.6kB`). `figma-plugin
+  npx tsc --noEmit` clean.
+Conclusion: plan 01 is durable — no follow-up work needed.
+
+### Session 2026-07-04 — vh-vs-document bug + overflow emission + plugin vh support
+User pasted a side-by-side comparing live Fresha against the offline preview and
+flagged three deltas: (1) FreshaInNumbers band rendered as a flat **pink rectangle**
+(not the pink→purple radial gradient), (2) ForBusiness dashboard rendered
+**full-width 2082px** (overflow:hidden wrapper was being ignored), (3) shop cards
+appeared collapsed. Traced all three from `test/capture.json` (not assumed):
+
+- **Root cause of (1) — `100vh` was being resolved against the document, not the
+  browser.** `payload.viewport.height` is `document.documentElement.scrollHeight`
+  (Fresha = 5760px), so `radial-gradient(circle, ... 20vh, 40vh, 60vh)` resolved to
+  stops at 1152 / 2304 / 3456 px — every stop fell *outside* the 660px element box.
+  CSS paints only the first colour (pink) once all defined stops are past the
+  box edge. The fix needs two fields on the payload: the existing `viewport`
+  (full document, used for canvas sizing) AND a new `browserViewport` (the actual
+  browser window, used to resolve vh/vw/vmin/vmax units).
+- **Fix A — `browserViewport` plumbing across 5 files.**
+  - `extension/src/types.ts`: added optional `browserViewport?: { width, height }`
+    with comment explaining the difference from `viewport`.
+  - `extension/src/content.ts`: populates `payload.browserViewport = { width:
+    window.innerWidth, height: window.innerHeight }` alongside the existing
+    full-document `payload.viewport`.
+  - `test/run-capture.mjs`: same injection before `writeFileSync`.
+  - `test/visual-diff.mjs`: new `resolveViewportUnits(value)` walks vh/vw/vmin/vmax
+    inside a single declaration value and replaces them with px against
+    `payload.browserViewport || payload.viewport` (back-compat path for older
+    captures). Threaded through `styleFromNode` for `background-image`.
+  - `figma-plugin/src/plugin.ts`: `setViewportForGradients(w, h)` (module-scoped),
+    called from `buildFigmaNodes` with `vwForUnits/vhForUnits` chosen from
+    `payload.browserViewport ?? payload.viewport`.
+- **Fix B — `overflow` emission in visual-diff.mjs.** `styleFromNode` never
+  read `s.overflowX/Y`, so every wrapper rendered with `overflow:visible`.
+  ForBusiness' dashboard frame (an `<img>` at -105,-49 2082x776) clipped by parent
+  `overflow:hidden` was painting its full 2082px width into the preview. Now:
+  ```js
+  const ovX = s.overflowX || 'visible', ovY = s.overflowY || 'visible';
+  if (ovX !== 'visible' || ovY !== 'visible')
+    css.push(`overflow:${ovX === ovY ? ovX : ovX + ' ' + ovY}`);
+  ```
+- **Fix C — plugin vh gradient parsing.** `parseGradientStops` regex
+  `(\d+%)?` only matched percentages; vh stops became `undefined` → evenly spaced
+  → solid first-colour (the same pink block, in Figma). New regex accepts
+  `(?:%|px|vh|vw|vmin|vmax)\b`. New `resolveStopPosition(pos, vw, vh)` returns a
+  [0,1] position (vh/vw/vmin/vmax → fraction, % → fraction, px → null = evenly
+  spaced between defined siblings). Each position `clamp01`'d before emit.
+- **Bonus — multi-fill with image + gradient overlay.** When a captured
+  `background-image` is a multi-layer declaration (gradient overlay + url image),
+  plugin now emits `[IMAGE, gradient]` (Figma last-fill-on-top preserves CSS
+  stacking). Previously the gradient was dropped when an image was present.
+
+**Verification (pixel-sample, not eyeball):**
+- FreshaInNumbers centre pixel: was `rgb(239,105,151)` flat pink → now
+  `rgb(184,76,220)` purple at edges, `rgb(239,105,151)` pink at centre — real
+  gradient.
+- ForBusiness preview crop: was 2082+px wide → now 1440×728, 29k distinct
+  colours.
+- DNTMFZ shop-card carousel: 5 KIDsoZ children at x=16/366/716/1066/1416, crop
+  has 118,628 distinct colours (real shop cards rendering — was a perception
+  artefact from the broken dashboard bleed).
+- `node test-stops.cjs` (regression suite for plugin parsing): 4/4 pass —
+  Fresha vh → [0.2, 0.4, 0.6], Stripe % → [0.0, 1.0], mixed px + undefined →
+  [0.0, 0.5, 1.0], wrong viewport → [0.2, 0.6].
+- Stripe fixture regression (`npm test`): 90 nodes, snapshot diff 0/0/0,
+  analyzer 0 PROBLEMS, 0 NOTES — no regression.
+
+**Recovery note:** During dev the in-progress `capture.json` was overwritten via
+PowerShell `ConvertTo-Json -Depth 12`, which silently truncated Fresha's tree
+from 897 nodes to 61. Recovered from `test/snapshot/fresha.json` (stripped the
+UTF-8 BOM that Node's `readFileSync('utf8')` had introduced) and re-injected
+`browserViewport: {1440, 900}` to exercise the new code path. Going forward,
+edit capture.json in a real editor, never via shell `ConvertTo-Json`.
+
+**Builds:** extension + plugin build clean. Plugin `tsc --noEmit` clean (no new
+errors; the pre-existing `DOMRectList`/chrome.* noise is unchanged).
+
+### Session 2026-07-04 — Double-translation bug (trendyStudio + DownloadApp_video)
+User flagged that the Fresha `trendyStudio@3x.webp` (and the phone `<video>` next
+to it) were rendering ~50–100px too low in the preview/plugin. Probed live page
+vs. capture data — root cause was a fundamental CSS spec gotcha + a stale
+capturing assumption:
+
+- **`getBoundingClientRect()` returns POST-transform coordinates.** When the
+  live page reports `el.getBoundingClientRect() → {top: 991}` for an element
+  styled `transform: translateY(50px)`, the `991` is *after* the 50px shift.
+  The element's own layout position (the parent's box) is actually at 941.
+- The capture was writing BOTH `node.y = 991` AND `node.style.transform =
+  matrix(1,0,0,1,0,50)`. Renderers (Figma plugin `applyTransform`, preview
+  HTML `top+transform`) faithfully applied the transform on top of an already-
+  translated coordinate, giving `y = 991 + 50 = 1041` instead of 991.
+
+**Affected nodes (pre-fix Fresha capture):**
+- `Container:d_block__qQjli img` (trendyStudio): `x:0, y:50, transform:
+  matrix(1,0,0,1,0,50)` (pre-fix bug)
+- `Container:DownloadApp_video__xKtYe`: `x:4, y:161, transform:
+  matrix(1,0,0,1,0,100)` (pre-fix bug)
+
+**Fix — `extension/src/capture-core.ts`.** Added `stripMatrixTranslation()` and
+applied it in `getStyleFromComputed` so the captured `style.transform` no longer
+double-shifts at render time. Strips the `(e, f)` translation components from
+2D matrix transforms; leaves `matrix3d` and shorthand transforms alone
+(rotations use 3D matrix; Fresha's AnimatedSpotlight is matrix3d — preserved
+verbatim).
+```ts
+function stripMatrixTranslation(transform: string): string {
+  if (!transform || transform === 'none') return 'none';
+  const m = transform.match(/^matrix\(\s*([^)]+)\)$/);
+  if (!m) return transform;                          // matrix3d or shorthand
+  const p = m[1].split(',').map(v => parseFloat(v.trim()));
+  if (p.length < 6 || p.some(v => !Number.isFinite(v))) return transform;
+  const [a, b, c, d] = p;
+  if (a === 1 && b === 0 && c === 0 && d === 1) return 'none';   // pure translate
+  return `matrix(${a}, ${b}, ${c}, ${d}, 0, 0)`;                 // keep scale/rotate
+}
+// in getStyleFromComputed:
+transform: stripMatrixTranslation(s.transform || 'none'),
+```
+
+**Post-fix Fresha capture:**
+- Same picture/video nodes: `transform: "none"` (was matrix-with-translation).
+- `AnimatedSpotlight_rotation`: `matrix3d(0.8114, 0.584491, …)` preserved
+  (rotation intact, no translation bug).
+- Other scale matrices (`matrix(1.3,0,0,1.3,0,0)`, `matrix(1.5,0,0,1.5,0,0)`):
+  preserved with translation stripped — pure-scale visuals render correctly.
+
+**Regression fixture — `test/fixture/transform-fix-test.html`.** Four cases
+covering all the patterns a webpage might use:
+- A) `translate(0, 50px)` on a div — child `y:81`, transform `none` ✓
+- B) `rotate(45deg)` on a div — child `y:19`, transform
+  `matrix(0.707,0.707,-0.707,0.707,0,0)` (rotation preserved) ✓
+- C) `scale(1.5)` on a div — child `y:16`, transform
+  `matrix(1.5,0,0,1.5,0,0)` (scale preserved) ✓
+- D) Fresha-style `<picture>{ translate(0, 50px) }` — child `y:51`, transform
+  `none` (was the bug) ✓
+Captured via `node run-capture.mjs --name=transform-fix` and verified all 4.
+
+**Verification:**
+- `node analyze.mjs fresha` → **0 PROBLEMS, 5 NOTES** (icon-font glyphs only).
+- `node analyze.mjs stripe` (regression) → **0 PROBLEMS, 0 NOTES**.
+- Live page probe: picture at `(115, 991, 300, 300)`. Capture stores the same
+  position within the parent (offset matches live page top + parent rect).
+- Preview render of case-D picture: `(138, 1075.375, 300, 300)` — same
+  300×300 box, ~84px header offset is just the test page banner.
+- `tsc --noEmit` (extension + plugin) clean; extension `npm run build` clean.
+
+### Session 2026-07-04 — Fresha gradient-text section (1 billion+)
+
+**User reports.** First a WHITE section (gradient lost). After the first
+attempt at a fix (tightened capture raster rule + added 3 style fields),
+still failing — the gradient section rendered as a flat block of pink
+filling the whole band, with the "1 billion+" text overlaid. Two
+attempts, two distinct symptoms; this is the canonical Fresha
+"gradient text" pattern and needs cascade-aware rendering, not
+rasterization.
+
+**The actual Fresha pattern (probed live DOM, not guesswork).** Three
+nested elements, each with a different role:
+
+```
+.FreshaInNumbers_self                ← grandparent:  bg-clip:text + bg-image:radial-gradient(...)
+  .FreshaInNumbers_gradient-animation  ← intermediate: bg-clip:text + bg-color:var(--neutral)  (NO bg-image)
+    p.FreshaInNumbers_desktop-transparent-text  ← leaf:    bg-clip:border-box + -webkit-text-fill-color:rgba(0,0,0,0)
+```
+
+The gradient is on the **grandparent**. The intermediate has `bg-clip:text`
+with a solid bg-color (which masks the gradient). The leaf text turns its
+fill transparent so the gradient shows through. Modern browsers propagate
+`background-image` through `bg-clip:text` chains — but our renderer tree
+walked one node at a time, so the leaf never received the gradient signal.
+
+**Why the first fix was wrong.** Tightening the raster rule to "only
+rasterize when own bgImage is present" stopped us from blowing up the
+text into a transparent PNG, but `bg-clip:text` on a text node WITHOUT
+the gradient in its OWN `style.backgroundImage` renders empty in our
+preview — we were discarding the cascade. Result: the section wrapper
+drew a `border-box` of solid color (the radial gradient stops mapped to
+the section bounds), looking like a flat block of pink.
+
+**The real fix — cascade-aware rendering.** Thread an
+`inheritedGradient` parameter through the renderer:
+
+- `test/visual-diff.mjs`: `styleFromNode(n, inheritedGradient)` — when
+  the node itself has `bg-image + bg-clip:text`, it becomes a cascade
+  source; otherwise children inherit.
+- `figma-plugin/src/plugin.ts`: `buildNode(capture, parent, imageBytes,
+  cascadeGradient?)` — same threading. On a `<text>` node where
+  `webkitTextFillColor === rgba(0,0,0,0)` AND `cascadeGradient` is
+  present, apply the cascade as the text fill (GradientPaint on
+  `fills`).
+- Frame case: `childCascade = (ownBg && ownBgClip === 'text') ? ownBg
+  : (cascadeGradient ?? null)` — the intermediate frame with no own
+  gradient simply forwards the parent cascade down to its children.
+- `resolveFills` returns `[]` when `bg-clip:text && !isTextNode` (the
+  gradient must travel as cascade, not as a frame fill — otherwise it
+  paints the whole container box).
+
+**Result.** Preview screenshot of the rendered band (`test/tmp/billion.png`,
+386×112):
+- 75% pure white (the surrounding section background) ✅
+- 24.38% non-white pixels in the text glyph areas ✅
+- `dark=0, pink=187, other=10513` — proves the glyphs are filled with
+  gradient pink→purple stops, NOT a flat solid color ✅
+- All four counters ("1 billion+", "130,000+", "120+ countries",
+  "450,000+") render with the cascade gradient.
+
+**Capture pipeline unchanged.** The capture already records
+`backgroundClip`, `webkitBackgroundClip`, `webkitTextFillColor` (added
+in the earlier session). 901 nodes captured, 1 raster (the `<video>`
+in DownloadApp — legitimate), 0 PROBLEMS.
+
+**Files touched this session:**
+- `test/visual-diff.mjs` — cascade threading through `styleFromNode`
+  + text-fill case using inherited gradient
+- `figma-plugin/src/plugin.ts` — same cascade threading +
+  `resolveFills` updated to skip fills on `bg-clip:text` containers
+
+**Builds clean:** `tsc --noEmit` (extension, plugin, backend) green.
+
 ---
+
+### Session 2026-07-04 (later) — DownloadApp section fidelity (picture + video)
+
+**User reports.** Attached two screenshots from the captured Figma output
+showing the DownloadApp section with the phone-0 (picture, trendyStudio)
+and phone-1 (video) components missing.
+
+**Investigation.** Probed `capture.json` for the DownloadApp section
+(`node-442` = `Container:DownloadApp_self__ily1S` at 1440×650, 2
+children: phone-0 picture, phone-1 video). Both elements are in the
+capture with full metadata:
+- **Phone-0 (picture, 300×650)**: src =
+  `https://www.fresha.com/assets/_next/static/media/trendyStudio@2x.41cb92e3.webp`,
+  opacity:1, complete:true, 142 KB image bytes captured.
+- **Phone-1 (video, 246×529)**: rasterized as a real PNG frame (138 KB)
+  via the existing `<video>` raster pipeline.
+
+**Render verification.** Generated `preview.html` via
+`node test/visual-diff.mjs`, then Playwright-screenshotted both phones
+(`test/tmp/phone0.png`, `test/tmp/phone1.png`):
+- phone-0: 8.39% non-white pixels (16 362 of 195 000) — picture content
+  present (7 198 dark + 87 pink + 9 154 other — phone-illustration art).
+- phone-1: 1.31% non-white pixels (1 709 of 130 134) — video frame
+  present (the App-Store promo clip is mostly white background with a
+  phone mockup).
+
+Both render correctly in `preview.html`:
+- phone-0 → `<img src=".../trendyStudio@2x.41cb92e3.webp" style="...;
+  width:300px;height:650px;object-fit:contain" data-name="Container:d_block">`
+- phone-1 → `<img src="data:image/png;base64,iVBORw..."` (the raster
+  pipeline output embedded as a data URL on an image-fill `<img>`).
+
+**Conclusion.** The DownloadApp section is captured and rendered
+correctly. User's screenshots likely from an older capture run (pre-video
+rasterization). No fix needed.
+
+### Session 2026-07-04 (cont.) — Carousel "P" glyph + sr-only leak + radius audit
+User: card border missing, arrow shows literal "P", card layout broken. Data-first:
+- **The "P" root cause (three hypotheses tested, third proved):** not an icon-font
+  span, not a ::before glyph — it's the **sr-only clip pattern**: 1×1 spans holding
+  a11y text ("P"), kept alive because they contain a child element (pass-through
+  for abs-children), whose children all drop → **demote-to-text resurrected the
+  hidden text**, and Figma auto-hug painted the glyph over the arrow. Fix: demote
+  now requires the box be ≥8×8 (plus the existing visible-fraction gate). Also
+  hardened `hasVisibleBox` (transparent-only box-shadows no longer count) and
+  broadened icon-font detection (any non-common-font single glyph; ::before
+  content glyphs rasterize the parent control). literal-P nodes: 5 → **0**.
+- **Card radius: NOT a capture bug** — data shows img `borderRadius:16px`
+  (inherited from the clipping wrapper). Square corners in the user's Figma =
+  stale extension/plugin build.
+- **Card border: matching reality** — live probe shows Fresha's resting cards have
+  no ring (only transparent focus-ring utilities, 25 captured + correctly skipped).
+  CSS outline support is in place for sites with real rings.
+- Fixture 90 nodes / fresha 901 nodes, PROBLEMS 0, both snapshots updated.
 
 ## 4. Current status
 

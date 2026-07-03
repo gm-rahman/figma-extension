@@ -110,22 +110,75 @@ function parseCssColor(css: string): ParsedColor | null {
 
 // ── Gradient helpers ──────────────────────────────────────────────────────
 
+// Convert viewport-relative length units (vh/vw/vmin/vmax) inside a gradient
+// stop position into the [0,1] range CSS uses for gradient stop positions.
+//
+// Why we need this:
+//   CSS gradient stops can be either percentages (`50%`) OR absolute lengths
+//   (`120px`, `30vh`). Figma's gradient stops only accept [0, 1] positions.
+//   Without normalising vh to the captured viewport, a Fresha-style
+//   `radial-gradient(circle, red 20vh, blue 60vh)` lands all stops at evenly-
+//   spaced positions and renders as a flat first-colour block.
+//
+// The "right" denominator is the gradient extent (radius for radial, line
+// length for linear). We don't know it here, but for vh/vw stops the captured
+// viewport is a close approximation: a FreshaInNumbers section in a 1440x900
+// browser viewport paints `20vh` at roughly 20% of its radius. We treat the
+// viewport itself as the reference frame, then clamp to [0, 1].
+function resolveStopPosition(pos: string, vw: number, vh: number): number | null {
+  if (!pos) return null;
+  const t = pos.trim();
+  if (t.endsWith('%')) return parseFloat(t) / 100;
+  const v = parseFloat(t);
+  if (!Number.isFinite(v)) return null;
+  if (t.endsWith('vh'))  return v / 100;          // treat 20vh ≈ 20% of gradient extent
+  if (t.endsWith('vw'))  return v / 100;
+  if (t.endsWith('vmin'))return v / 100;
+  if (t.endsWith('vmax'))return v / 100;
+  return null;                                    // px / no-unit → keep undefined, evenly space
+}
+
+// Holds the captured viewport so gradient parsing can normalise vh/vw stops.
+//   module-scoped because every gradient parses against the same payload.
+let _vw = 0;
+let _vh = 0;
+export function setViewportForGradients(w: number, h: number) { _vw = w; _vh = h; }
+
 function parseGradientStops(css: string): ColorStop[] {
   const stops: ColorStop[] = [];
-  const pattern = /(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})(\s+[\d.]+%)?/g;
+  // Accept percentage OR absolute length (px, vh, vw, vmin, vmax) as the stop
+  // position. The previous regex only knew about `%`, which dropped every
+  // length-based stop (returning all positions as `undefined`).
+  const pattern = /(rgba?\([^)]+\)|#[0-9a-fA-F]{3,8})(\s+[\d.]+(?:%|px|vh|vw|vmin|vmax)\b)?/g;
   let m: RegExpExecArray | null;
   const raw: Array<{color: string; pos?: number}> = [];
   while ((m = pattern.exec(css)) !== null) {
-    raw.push({ color: m[1], pos: m[2] ? parseFloat(m[2])/100 : undefined });
+    const resolvedPos = m[2] ? resolveStopPosition(m[2].trim(), _vw, _vh) : undefined;
+    raw.push({ color: m[1], pos: resolvedPos == null ? undefined : resolvedPos });
   }
   if (raw.length < 2) return [];
-  raw.forEach((s, i) => { if (s.pos === undefined) s.pos = i / (raw.length - 1); });
+  // For any undefined positions, fall back to evenly spacing them across the
+  // range of the defined siblings (keeps `red, blue 50%` from collapsing).
+  let firstDefined = raw.findIndex(s => s.pos !== undefined);
+  let lastDefined  = -1;
+  for (let i = raw.length - 1; i >= 0; i--) if (raw[i].pos !== undefined) { lastDefined = i; break; }
+  if (firstDefined < 0 || lastDefined < 0) {
+    raw.forEach((s, i) => { s.pos = i / (raw.length - 1); });
+  } else {
+    raw.forEach((s, i) => {
+      if (s.pos === undefined) {
+        s.pos = (firstDefined + (i - firstDefined) * (lastDefined - firstDefined) / Math.max(1, raw.length - 1 - firstDefined)) / Math.max(1, lastDefined);
+      }
+    });
+  }
   for (const s of raw) {
     const p = parseCssColor(s.color);
-    if (p) stops.push({ position: s.pos!, color: { r: p.color.r, g: p.color.g, b: p.color.b, a: p.opacity } });
+    if (p) stops.push({ position: clamp01(s.pos!), color: { r: p.color.r, g: p.color.g, b: p.color.b, a: p.opacity } });
   }
   return stops;
 }
+
+function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
 
 function linearGradientFill(css: string): GradientPaint | null {
   const stops = parseGradientStops(css);
@@ -167,8 +220,22 @@ function radialGradientFill(css: string): GradientPaint | null {
   return { type: 'GRADIENT_RADIAL', gradientTransform, gradientStops: stops };
 }
 
-function resolveFills(style: ElementStyle): Paint[] {
+function resolveFills(style: ElementStyle, isTextNode = false): Paint[] {
   const bg = style.backgroundImage;
+
+  // `background-clip: text` on a NON-text element (e.g. a section wrapper like
+  // Fresha's `FreshaInNumbers_self`) hides its own background — the gradient
+  // only paints on the TEXT GLYPHS of transparent-fill descendants. Figma has
+  // no equivalent of this CSS-only cascade, but we *can* model the cascade
+  // explicitly: buildNode threads the cascade-source gradient down to text
+  // descendants. For the wrapper itself we return [] so Figma doesn't paint a
+  // non-existent section-wide block.
+  // (For a TEXT node, bgClip:text is the leaf case: apply the gradient as its
+  // text fill — that's handled in the `case 'text':` branch, not here.)
+  const bgClip = style.backgroundClip || style.webkitBackgroundClip;
+  if (bg && bg !== 'none' && !bg.includes('url(')) {
+    if (bgClip === 'text' && !isTextNode) return [];
+  }
 
   // Check gradient BEFORE solid — gradient shorthand sets backgroundColor to transparent
   if (bg && bg !== 'none' && !bg.includes('url(')) {
@@ -529,7 +596,8 @@ function lookupFont(style: ElementStyle): FontName {
 async function buildNode(
   capture: CaptureNode,
   parent: FrameNode | PageNode,
-  imageBytes: Record<string, Uint8Array>
+  imageBytes: Record<string, Uint8Array>,
+  cascadeGradient?: string | null,
 ): Promise<void> {
   // Children's x/y are relative to their direct parent's top-left — no extra subtraction.
   const x = capture.x;
@@ -593,17 +661,26 @@ async function buildNode(
           frame.insertChild(0, svgBg);
           svgBg.x = 0; svgBg.y = 0;
           try { (svgBg as any).layoutPositioning = 'ABSOLUTE'; } catch {}
-        } catch { frame.fills = resolveFills(capture.style); }
+        } catch { frame.fills = resolveFills(capture.style, false); }
       } else if (bgUrl && imageBytes[bgUrl]) {
         try {
           const img = figma.createImage(imageBytes[bgUrl]);
-          frame.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: 'FILL' }];
-        } catch { frame.fills = resolveFills(capture.style); }
+          const imagePaint: Paint = { type: 'IMAGE', imageHash: img.hash, scaleMode: 'FILL' };
+          // CSS multi-layer background (gradient overlay + url image): render BOTH.
+          // Our extractor takes the first url(); a gradient declared before it sits
+          // ON TOP in CSS — Figma paints last-fill-on-top, so image first, gradient last.
+          const bg = capture.style.backgroundImage || '';
+          const overlay = bg.includes('gradient')
+            ? (linearGradientFill(bg) || radialGradientFill(bg))
+            : null;
+          frame.fills = overlay ? [imagePaint, overlay] : [imagePaint];
+        } catch { frame.fills = resolveFills(capture.style, false); }
       } else {
-        frame.fills = resolveFills(capture.style);
+        frame.fills = resolveFills(capture.style, false);
       }
 
       // Stroke
+      let hasStroke = false;
       if (capture.style.borderStyle !== 'none') {
         const bc = parseCssColor(capture.style.borderColor);
         const bw = parsePx(capture.style.borderWidth);
@@ -611,6 +688,18 @@ async function buildNode(
           frame.strokes      = [{ type: 'SOLID', color: bc.color, opacity: bc.opacity }];
           frame.strokeWeight = bw;
           frame.strokeAlign  = 'INSIDE';
+          hasStroke = true;
+        }
+      }
+      // CSS outline (rings, focus outlines) → OUTSIDE stroke; skipped when a
+      // border stroke exists (Figma has one stroke set) or colour is transparent.
+      if (!hasStroke && capture.style.outlineStyle && capture.style.outlineStyle !== 'none') {
+        const oc = parseCssColor(capture.style.outlineColor);
+        const ow = parsePx(capture.style.outlineWidth);
+        if (oc && ow > 0) {
+          frame.strokes      = [{ type: 'SOLID', color: oc.color, opacity: oc.opacity }];
+          frame.strokeWeight = ow;
+          frame.strokeAlign  = 'OUTSIDE';
         }
       }
 
@@ -635,8 +724,19 @@ async function buildNode(
       applyTransform(frame, capture.style, x, y);
 
       // Build children (they are already relative to this frame's origin)
+      // Fresha's gradient-text cascade: a non-text frame with `bgClip:text` and
+      // its own background-image becomes the cascade source for descendants.
+      // The wrapper itself doesn't paint (the gradient is hidden by bgClip:text
+      // + opaque text-fill — same reason resolveFills returns []), but any
+      // descendant text node with `-webkit-text-fill-color: transparent` will
+      // render its glyphs in this gradient on the live page.
+      const ownBg     = capture.style.backgroundImage;
+      const ownBgClip = capture.style.backgroundClip || capture.style.webkitBackgroundClip;
+      const childCascade = (ownBg && ownBg !== 'none' && ownBgClip === 'text')
+        ? ownBg
+        : (cascadeGradient ?? null);
       for (const child of sortByZIndex(capture.children))
-        await buildNode(child, frame, imageBytes);
+        await buildNode(child, frame, imageBytes, childCascade);
       break;
     }
 
@@ -670,10 +770,24 @@ async function buildNode(
       else if (align === 'right')   text.textAlignHorizontal = 'RIGHT';
       else if (align === 'justify') text.textAlignHorizontal = 'JUSTIFIED';
 
-      const fg = parseCssColor(capture.style.color);
-      text.fills = fg
-        ? [{ type: 'SOLID', color: fg.color, opacity: fg.opacity }]
-        : [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+      // Fresha cascade: a text node with `-webkit-text-fill-color: transparent` AND
+      // a `cascadeGradient` from an ancestor with `bgClip:text + gradient` should
+      // render its glyphs in that cascade gradient (not in solid `color`).
+      const isTransparentFill = (capture.style.webkitTextFillColor === 'rgba(0, 0, 0, 0)');
+      if (isTransparentFill && cascadeGradient) {
+        const cascadeFill = linearGradientFill(cascadeGradient) || radialGradientFill(cascadeGradient);
+        text.fills = cascadeFill ? [cascadeFill] : [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+      } else if (isTransparentFill && capture.style.backgroundImage && (capture.style.backgroundClip === 'text' || capture.style.webkitBackgroundClip === 'text')) {
+        // Own-gradient + own-transparent-fill text leaf (no cascade needed):
+        // apply own gradient directly to the glyphs.
+        const ownFill = linearGradientFill(capture.style.backgroundImage) || radialGradientFill(capture.style.backgroundImage);
+        text.fills = ownFill ? [ownFill] : [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+      } else {
+        const fg = parseCssColor(capture.style.color);
+        text.fills = fg
+          ? [{ type: 'SOLID', color: fg.color, opacity: fg.opacity }]
+          : [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+      }
 
       text.characters = capture.text ?? '';
 
@@ -760,7 +874,7 @@ async function buildNode(
       applyTransform(frame, capture.style, x, y);
 
       for (const child of sortByZIndex(capture.children))
-        await buildNode(child, frame, imageBytes);
+        await buildNode(child, frame, imageBytes, cascadeGradient ?? null);
       break;
     }
   }
@@ -776,6 +890,11 @@ async function buildFigmaNodes(
 ): Promise<FrameNode> {
   const page = figma.currentPage;
   const { width: vw, height: vh } = payload.viewport;
+  // CSS vh/vw units resolve against the browser viewport at capture time, NOT
+  // the full document. Older payloads fall back to `viewport` (which is full-page).
+  const vwForUnits = (payload as any).browserViewport?.width  ?? vw;
+  const vhForUnits = (payload as any).browserViewport?.height ?? vh;
+  setViewportForGradients(vwForUnits, vhForUnits);
   const first = payload.nodes[0];
 
   const wrapperW = payload.mode === 'selected-element' ? Math.max(first?.width ?? vw, 1) : vw;
@@ -794,7 +913,7 @@ async function buildFigmaNodes(
   await preloadFonts(payload.nodes);
 
   for (const node of sortByZIndex(payload.nodes))
-    await buildNode(node, wrapper, imageBytes);
+    await buildNode(node, wrapper, imageBytes, null);
 
   return wrapper;
 }
@@ -828,3 +947,4 @@ async function buildMultiViewport(frames: FrameImport[]): Promise<string> {
   if (built.length) figma.viewport.scrollAndZoomIntoView(built);
   return frames.map(f => f.label).join(', ');
 }
+
