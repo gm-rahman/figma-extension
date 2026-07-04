@@ -1,0 +1,103 @@
+﻿=== CSS props ACTUALLY CUSTOMIZED and captured by ElementStyle ===
+  align-items                           161/2000  e.g. normal
+  align-self                             58/2000  e.g. auto
+  aspect-ratio                           56/2000  e.g. auto
+  backdrop-filter                         1/2000  e.g. none
+  background-clip                         5/2000  e.g. border-box
+  background-color                      186/2000  e.g. rgba(0, 0, 0, 0)
+  background-image                        3/2000  e.g. none
+  border-bottom-left-radius             264/2000  e.g. 0px
+  border-bottom-right-radius            264/2000  e.g. 0px
+  border-top-left-radius                264/2000  e.g. 0px
+  border-top-right-radius               264/2000  e.g. 0px
+  bottom                                279/2000  e.g. auto
+  box-shadow                             30/2000  e.g. none
+  box-sizing                           1999/2000  e.g. border-box
+  caret-color                          2000/2000  e.g. rgb(13, 13, 13)
+  color                                1968/2000  e.g. rgb(13, 13, 13)
+  column-gap                            188/2000  e.g. normal
+  cursor                                641/2000  e.g. auto
+  display                              1209/2000  e.g. block
+  flex-basis                             37/2000  e.g. auto
+  flex-direction                        112/2000  e.g. row
+  flex-grow                              36/2000  e.g. 0
+  flex-shrink                           222/2000  e.g. 1
+  flex-wrap                              28/2000  e.g. nowrap
+  font-family                          2000/2000  e.g. RoobertPRO, AktivGroteskVF, sans-serif
+  font-size                             437/2000  e.g. 16px
+  font-weight                           293/2000  e.g. 400
+  grid-template-columns                  37/2000  e.g. none
+  grid-template-rows                     37/2000  e.g. none
+  height                               1150/2000  e.g. 6512.66px
+  justify-content                       100/2000  e.g. normal
+  left                                  285/2000  e.g. auto
+  line-height                          1998/2000  e.g. 18.4px
+  margin-bottom                         205/2000  e.g. 0px
+  margin-left                            49/2000  e.g. 0px
+  margin-right                          104/2000  e.g. 0px
+  margin-top                             51/2000  e.g. 0px
+  object-fit                              1/2000  e.g. fill
+  opacity                               149/2000  e.g. 1
+  outline-color                        2000/2000  e.g. rgb(13, 13, 13)
+
+=== CSS props ACTUALLY CUSTOMIZED but NOT captured (TOP GAPS) ===
+  animation-duration                    107/2000  e.g. 0s
+  animation-iteration-count             107/2000  e.g. 1
+  animation-name                        108/2000  e.g. none
+  animation-range-end                     1/2000  e.g. normal
+  animation-timeline                      1/2000  e.g. auto
+  animation-timing-function             108/2000  e.g. ease
+  appearance                             15/2000  e.g. none
+  backface-visibility                     2/2000  e.g. visible
+  background-position                     1/2000  e.g. 0% 0%
+  background-size                      2000/2000  e.g. auto
+  block-size                           1145/2000  e.g. 6512.66px
+  border-block-end-color               2000/2000  e.g. rgb(13, 13, 13)
+  border-block-end-style                 23/2000  e.g. none
+  border-block-end-width                 23/2000  e.g. 0px
+  border-block-start-color             2000/2000  e.g. rgb(13, 13, 13)
+  border-block-start-style               22/2000  e.g. none
+  border-block-start-width               22/2000  e.g. 0px
+  border-bottom-color                  1968/2000  e.g. rgb(13, 13, 13)
+  border-bottom-style                    23/2000  e.g. none
+  border-bottom-width                    23/2000  e.g. 0px
+  border-end-end-radius                 264/2000  e.g. 0px
+  border-end-start-radius               264/2000  e.g. 0px
+  border-inline-end-color              2000/2000  e.g. rgb(13, 13, 13)
+  border-inline-end-style                22/2000  e.g. none
+  border-inline-end-width                22/2000  e.g. 0px
+  border-inline-start-color            2000/2000  e.g. rgb(13, 13, 13)
+  border-inline-start-style              22/2000  e.g. none
+  border-inline-start-width              22/2000  e.g. 0px
+  border-left-color                    1968/2000  e.g. rgb(13, 13, 13)
+  border-left-style                      22/2000  e.g. none
+  border-left-width                      22/2000  e.g. 0px
+  border-right-color                   1968/2000  e.g. rgb(13, 13, 13)
+  border-right-style                     22/2000  e.g. none
+  border-right-width                     22/2000  e.g. 0px
+  border-start-end-radius               264/2000  e.g. 0px
+  border-start-start-radius             264/2000  e.g. 0px
+  border-top-color                     1968/2000  e.g. rgb(13, 13, 13)
+  border-top-style                       22/2000  e.g. none
+  border-top-width                       22/2000  e.g. 0px
+  clip                                   42/2000  e.g. auto
+  clip-rule                            2000/2000  e.g. nonzero
+  column-rule-color                    1968/2000  e.g. rgb(13, 13, 13)
+  column-rule-width                    2000/2000  e.g. 3px
+  contain-intrinsic-height             2000/2000  e.g. none
+  contain-intrinsic-width              2000/2000  e.g. none
+  container-type                          6/2000  e.g. normal
+  corner-bottom-left-shape             2000/2000  e.g. round
+  corner-bottom-right-shape            2000/2000  e.g. round
+  corner-end-end-shape                 2000/2000  e.g. round
+  corner-end-start-shape               2000/2000  e.g. round
+  corner-start-end-shape               2000/2000  e.g. round
+  corner-start-start-shape             2000/2000  e.g. round
+  corner-top-left-shape                2000/2000  e.g. round
+  corner-top-right-shape               2000/2000  e.g. round
+  dynamic-range-limit                  2000/2000  e.g. no-limit
+  fill                                 2000/2000  e.g. rgb(0, 0, 0)
+  fill-rule                            2000/2000  e.g. nonzero
+  flood-color                          2000/2000  e.g. rgb(0, 0, 0)
+  font-stretch                         2000/2000  e.g. 100%
+  font-variant                          141/2000  e.g. normal

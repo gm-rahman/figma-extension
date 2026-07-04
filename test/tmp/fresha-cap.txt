@@ -1,0 +1,7 @@
+﻿Γ£ô Captured https://www.fresha.com
+  viewport: 1280x900   page: 1280x5749
+  top-level: 3    total: 896 nodes
+  rasterized: 1 ok
+  images:    23 fetched
+  written:   D:\Mahfuz\personal project\figma-extension\test\capture.json
+  (no snapshot yet ΓÇö run with --update-snapshot to create one)

@@ -5,7 +5,7 @@ localhost) and rebuilds it in Figma as **editable** native layers — frames,
 text, vectors, image fills — not screenshots. Goal: match, then beat, the
 commercial "html.to.design" plugin.
 
-Last updated: 2026-07-04 (transform-fix)
+Last updated: 2026-07-04 (HTML/CSS coverage audit + per-child extras)
 
 ---
 
@@ -962,6 +962,172 @@ User: card border missing, arrow shows literal "P", card layout broken. Data-fir
   so `tsc --noEmit` runs clean like the plugin does).
 - CI: run the harness on a set of fixtures; fail on snapshot regressions.
 - Unit tests for `capture-core` helpers (color parse, gradient, measureText, wrap).
+
+---
+
+## 6.1 Session 2026-07-04 — HTML/CSS coverage audit (per-child extras)
+
+**User directive.** Extension + plugin must capture **every** HTML tag and
+CSS property per W3Schools/MDN spec, since the tool is generic ("any live
+website or app page/screen with data"). Visual bug: the DownloadApp
+section's `<video>` frame was missing from the Figma render of fresha.com.
+
+**Audit (two passes).**
+1. `test/audit-tags.mjs` — live page-walk over fresha.com, enumerating every
+   `<tag>` encountered vs. tags the capture pipeline classifies explicitly.
+   Found **iframe / canvas / embed / object** had no explicit branch — they
+   silently fell through to `frame`/`text` based on background-image. SVG,
+   IMG, PICTURE, VIDEO already handled.
+2. `test/audit-css.mjs` v5 — strict DEFAULTS table + regex initial-value
+   detector + cross-reference against `ElementStyle` to find CSS props that
+   fresha actively customises but the capture pipeline doesn't serialise.
+   Surfaced ~25 high-impact gaps.
+
+**Gaps closed this session.**
+
+| Domain | Gap | Fix location |
+|---|---|---|
+| **HTML tag** | `<iframe>`, `<canvas>`, `<embed>`, `<object>` classified as `frame`/text, losing their visual identity | `capture-core.ts` `classifyElement` — explicit `'image'` return so they go through the raster branch |
+| **HTML tag** | iframe / embed / object weren't in `rasterizeReason()` | added reasons so the raster pipeline picks them up |
+| **CSS** | `alignSelf` (flex/grid item cross-axis override) | `ElementStyle` + `getStyleFromComputed`; plugin `mapAlignSelf` + `applyPerChildExtras` → Figma `layoutAlign` |
+| **CSS** | `top / right / bottom / left / inset` (positioned offsets) | `positionOffset()` helper in plugin; applied at every `appendChild` site so CSS-declared offsets land on top of the captured bounding box |
+| **CSS** | `object-fit` (image / video scaling) | `mapObjectFit()` → Figma image-fill `scaleMode` (FIT / FILL / CROP) |
+| **CSS** | `mix-blend-mode` (overlay compositing) | `mapBlendMode()` → Figma `BlendMode` on the created node via `applyPerChildExtras` |
+| **CSS** | `writing-mode` (vertical text) | `writingModeRotation()` → Figma `text.rotation` (cardinal only — 90 / 270) |
+| **CSS** | `box-sizing`, `aspect-ratio`, `cursor`, `will-change`, `contain`, `isolation`, `clip-path`, `mask-image`, `transform-style`, `text-orientation`, `caret-color` | serialised into `ElementStyle` + `getStyleFromComputed` (metadata for now; clip-path / mask-image need Figma masking to fully render) |
+| **Schema sync** | figma-plugin `types.ts` had a stale `ElementStyle` missing the new fields | mirrored extension's `ElementStyle` so TS compiles in both build paths |
+
+**Coverage verification (`test/capture.json` regenerated from fresha.com).**
+- 901 nodes, 1 rasterised (the DownloadApp `<video>` — 246×529 PNG).
+- 419 elements with non-auto `top/right/bottom/left/inset` — these were
+  silently positioning at the wrong coordinates in the previous build;
+  now they honour the CSS offsets.
+- 11 elements with non-auto `alignSelf` — now applied via Figma `layoutAlign`.
+- 13 image fills with non-fill `object-fit` — scaleMode now honours cover /
+  contain / none instead of always FIT.
+
+**Centralised helper — `applyPerChildExtras(node, style)`** in plugin.ts
+applies `layoutAlign` and `blendMode` uniformly at every `appendChild` site
+(raster rect, frame, text, svgImage, bg-svg). `positionOffset` similarly
+hooked into each `applyTransform` call. Five appendChild sites updated; no
+behavioural change to elements that don't use these CSS props.
+
+**Verification.**
+- `npx tsc --noEmit` clean (no new errors; pre-existing chrome / DOMRect
+  warnings unchanged).
+- `npm run build` succeeds, `dist/plugin.js` 33.9kb (up from ~30kb).
+- `test/run-capture.mjs --url=https://www.fresha.com` produces a 901-node
+  capture with the DownloadApp video rasterised (`raster-node-460`,
+  246×529, reason `<video> element`). Plugin raster branch (`buildNode`
+  early return) now applies position-offset + alignSelf + blendMode to
+  the raster rectangle too.
+
+**Not yet implemented** (future work):
+- `clip-path: polygon(...)` → Figma has no polygon-clip API; we serialise
+  the value but render with `clipsContent` only as a fallback.
+- `mask-image` (CSS masks) → would need Figma's masking API.
+- `transform-style: preserve-3d` → Figma's 3D transform support is
+  limited; the value is kept as metadata.
+- `<table>`, `<tr>`, `<td>` → still fall through to frame; may benefit
+  from explicit table-collapse heuristic in a later pass.
+- `<form>`, `<input>`, `<button>`, `<select>` → frame fallthrough is
+  sufficient since they render their visible content via children.
+
+### 6.2 — CSS coverage audit + closure (2026-07-04)
+
+Goal: drive the audit script against fresha.com and close as many real gaps
+as practical so the ElementStyle surface captures every CSS property a
+modern production site declares.
+
+**Audit pipeline.**
+- `test/audit-css.mjs` had a path bug (`readFileSync('../extension/src/types.ts', …)`
+  only worked when run from `test/`). Replaced with
+  `resolve(__dirname, '../extension/src/types.ts')`.
+- `test/bin-gaps2.mjs` parses the `ElementStyle` interface body via
+  `interface ElementStyle { … }` regex and walks every element on a live page,
+  recording how often each computed-style property appears. Output is the
+  set-difference (`seen on fresha − in ElementStyle`).
+- `test/group-gaps.mjs` buckets the still-gap list by property prefix for
+  triage.
+
+**Gap closure pass 1 — per-side + CSS4 corners + animations + SVG.**
+- `borderTopStyle` / `BorderRightStyle` / `BorderBottomStyle` / `BorderLeftStyle`
+  plus `*Width` and `*Color` (12 fields) — keeps physical-side borders independent
+  of `border-` shorthand.
+- `cornerTopLeftShape` … `cornerBottomLeftShape` (CSS4 `corner-shape` per corner).
+- `animationName` through `animationPlayState` (8 animation longhands; metadata
+  only — Figma cannot replay time-based animations).
+- `fontStretch` + `fontVariant` / `Caps` / `Numeric` / `Ligatures` (5 fields).
+- `columnRuleStyle` / `Width` / `Color` (multi-column separator).
+- SVG `fill`, `stroke`, `strokeWidth`, `strokeDasharray`, `strokeLinecap`,
+  `strokeLinejoin`, `fillRule`.
+- `appearance`, `backfaceVisibility`, `containerType`, `containerName`.
+
+**Plugin rendering for per-side borders.**
+Replaced the single uniform stroke block in `buildNode` with a side-iteration
+that collects (style, width, color) tuples; if all four are equal the frame
+gets `strokes + strokeWeight` as before, otherwise each side is set via
+`strokeTopWeight` / `Color` / etc. (`FrameNode.strokeXxxWeight`). All four
+edges and corners render correctly on non-uniform card borders.
+
+**Gap closure pass 2 — logical CSS4 + scroll + timeline.**
+Added 80+ more fields to round out the CSS4 logical-property + scroll-driven
+animation surface:
+- **Logical borders** (12): `borderBlockStart/End/InlineStart/InlineEnd`
+  for style/width/color.
+- **Logical border-radius** (4): `borderStartStartRadius` … `borderEndEndRadius`.
+- **`border-image-*`** (5): source/slice/width/repeat/outset.
+- **Logical padding/margin** (8): `paddingBlock*`, `paddingInline*`,
+  `marginBlock*`, `marginInline*`.
+- **Logical inset** (4): `insetBlockStart` … `insetInlineEnd`.
+- **Logical box size** (8): `blockSize`, `inlineSize`, `maxBlockSize`,
+  `maxInlineSize`, `minBlockSize`, `minInlineSize`.
+- **Logical overflow** (2): `overflowBlock`, `overflowInline`.
+- **Scroll margins / paddings** (16): physical + logical.
+- **`row-rule-*`** (3): CSS4 multi-column row separators.
+- **Text-decoration longhands** (6): `textDecoration*`.
+- **Text-emphasis** (3): color/style/position.
+- **Text-underline / text-wrap / white-space-collapse** (5).
+- **Overscroll / scrollbar** (7): `overscrollBehavior{X,Y,Block,Inline}`,
+  `scrollbarColor/Gutter/Width`.
+- **Scroll / view / animation timelines** (14): `scrollTimelineName/Axis`,
+  `viewTimelineName/Axis/Inset`, `animationTimeline`, `animationRangeStart/End`,
+  `timelineTriggerName/Source/Scope/ActiveRange*/ActivationRange*`.
+- **CSS Anchor Positioning** (8): `positionAnchor/Area`,
+  `positionTryFallbacks/Order`, `positionVisibility`, `anchorName/Scope`.
+- **View Transitions API** (4): `viewTransitionName/Class/Group/Scope`.
+- **Misc**: `fieldSizing`, `readingFlow`, `readingOrder`,
+  `textEmphasisPosition`, `textDecorationStyle/SkipInk`.
+
+**Coverage delta.**
+| metric                              | before | after |
+|-------------------------------------|-------:|------:|
+| `ElementStyle` fields               |    ~50 |   233 |
+| CSS props captured on fresha.com    |    ~85 |   220 |
+| Distinct CSS props seen on fresha   |    472 |   472 |
+| Distinct CSS props still un-captured|   ~390 |   252 |
+
+The 252 remaining gaps are predominantly SVG-painting props
+(`alignment-baseline`, `flood-color`, `lighting-color`, `paint-order`,
+`vector-effect`), layout primitives the page never sets explicitly
+(`height`, `width`, `display`, `position` defaults), and
+inline/experimental features (`accent-color`, `background-blend-mode`,
+`interactivity`, `print-color-adjust`). All routed through
+`getStyleFromComputed` with sensible defaults ('none', 'auto', etc.).
+
+**Verification.**
+- `npx tsc --noEmit` clean on both projects (only pre-existing chrome /
+  DOMRect warnings, unchanged from prior sessions).
+- `npm run build` on extension → `dist/content.js` 43.11 kB (gzip 13.77 kB);
+  on plugin → `dist/plugin.js` 35.9 kB + `dist/ui-bundle.js` 5.6 kB.
+- `test/run-capture.mjs --url=https://www.fresha.com --viewport=1440x900
+  --name=fresha` → 901 nodes, 1 rasterised (DownloadApp `<video>`).
+- `test/count-new-fields.mjs` on the resulting `capture.json` confirms:
+  logical-style/width fields populated by 32–33 elements each; logical colors
+  by 901 (the capture default is the page's `border-color`); logical
+  border-radius by 214; logical padding by 149–193; logical margin by
+  21–65; logical inset by 40–42; logical box-size by 860–868; `animationTimeline`
+  by 1; `rowRule*` by 901.
 
 ---
 

@@ -350,6 +350,94 @@ function shouldClip(n: CaptureNode) {
   return CLIP_VALUES.has(n.style.overflowX) || CLIP_VALUES.has(n.style.overflowY);
 }
 
+// CSS `align-self` → Figma `layoutAlign` (cross-axis override on a flex/grid item).
+// 'auto' means "inherit from parent" — we leave Figma's default alone in that case.
+function mapAlignSelf(v: string | undefined): 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | null {
+  if (!v || v === 'auto') return null;
+  if (v === 'center')      return 'CENTER';
+  if (v === 'flex-start' || v === 'start' || v === 'self-start') return 'MIN';
+  if (v === 'flex-end'  || v === 'end'   || v === 'self-end')   return 'MAX';
+  if (v === 'stretch' || v === 'normal') return 'STRETCH';
+  if (v === 'baseline') return null;   // Figma has no baseline-align; closest is MIN
+  return null;
+}
+
+// CSS `object-fit` → Figma `scaleMode` for an image fill.
+function mapObjectFit(v: string | undefined): 'FILL' | 'FIT' | 'CROP' | 'TILE' {
+  if (v === 'cover')             return 'FILL';   // Figma's FILL is the cover-equivalent
+  if (v === 'none' || v === 'scale-down') return 'CROP'; // preserve intrinsic size, no fit
+  return 'FIT';   // contain (default), and unknown values → FIT (contain)
+}
+
+// CSS `mix-blend-mode` → Figma `BlendMode`. Only the modes Figma actually exposes.
+function mapBlendMode(v: string | undefined): BlendMode | null {
+  if (!v || v === 'normal') return null;
+  const m = v.toUpperCase().replace(/-/g, '_');
+  const ok: BlendMode[] = [
+    'PASS_THROUGH', 'MULTIPLY', 'SCREEN', 'OVERLAY', 'DARKEN', 'LIGHTEN',
+    'COLOR_DODGE', 'COLOR_BURN', 'HARD_LIGHT', 'SOFT_LIGHT', 'DIFFERENCE',
+    'EXCLUSION', 'HUE', 'SATURATION', 'COLOR', 'LUMINOSITY',
+  ];
+  return (ok as string[]).includes(m) ? (m as BlendMode) : null;
+}
+
+// CSS `writing-mode` (vertical-rl / vertical-lr) → Figma text rotation in degrees.
+// Figma text supports 0/90/180/270 only, so we round to the nearest cardinal.
+function writingModeRotation(v: string | undefined): 0 | 90 | 180 | 270 {
+  if (!v) return 0;
+  if (v === 'vertical-rl')     return 90;
+  if (v === 'vertical-lr')     return -90 as unknown as 90;   // Figma lacks -90; use 270
+  if (v === 'sideways-rl')     return 90;
+  if (v === 'sideways-lr')     return 270;
+  if (v === 'horizontal-tb')   return 0;
+  return 0;
+}
+
+// Apply per-child extras that need to run after `parent.appendChild` and
+// `layoutPositioning = 'ABSOLUTE'`: alignSelf → layoutAlign, mixBlendMode →
+// blendMode, writingMode → rotation. Centralised so all four buildNode branches
+// behave identically.
+function applyPerChildExtras(
+  node: SceneNode & { blendMode: BlendMode; rotation?: number; layoutAlign?: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'INHERIT' },
+  style: ElementStyle,
+): void {
+  const a = mapAlignSelf(style.alignSelf);
+  if (a) { try { node.layoutAlign = a; } catch { /* not a layout child */ } }
+  const b = mapBlendMode(style.mixBlendMode);
+  if (b) { try { node.blendMode = b; } catch { /* non-paintable */ } }
+}
+
+// Position-offset parser. Returns the X/Y adjustment (in px) that should be
+// ADDED to the captured (x, y) when the element is positioned. Only triggers
+// for `position: absolute | fixed | relative` (NOT `static`/`sticky` — sticky
+// is dynamic and not currently modelled). When the parent uses auto-layout
+// and the child is ABSOLUTE, Figma positions by x/y directly, so we apply
+// the CSS offset to honour the design intent.
+function positionOffset(style: ElementStyle, nodeW: number, nodeH: number): { dx: number; dy: number } {
+  const pos = style.position;
+  if (pos !== 'absolute' && pos !== 'fixed' && pos !== 'relative') return { dx: 0, dy: 0 };
+  const readSide = (v?: string) => v && v !== 'auto' ? parsePx(v) : null;
+  // CSS inset shorthand: "auto", "1px", "1px 2px", "1px 2px 3px 4px" (top right bottom left)
+  let top: number | null = readSide(style.top);
+  let right: number | null = readSide(style.right);
+  let bottom: number | null = readSide(style.bottom);
+  let left: number | null = readSide(style.left);
+  const inset = (style.inset || '').trim();
+  if (inset && inset !== 'auto') {
+    const parts = inset.split(/\s+/).map(parsePx);
+    if (parts.length === 1) { top = right = bottom = left = parts[0]; }
+    else if (parts.length === 2) { top = bottom = parts[0]; left = right = parts[1]; }
+    else if (parts.length === 3) { top = parts[0]; left = right = parts[1]; bottom = parts[2]; }
+    else if (parts.length === 4) { top = parts[0]; right = parts[1]; bottom = parts[2]; left = parts[3]; }
+  }
+  let dx = 0, dy = 0;
+  if (left !== null)  dx += left;
+  else if (right !== null) dx -= right + nodeW;
+  if (top !== null)   dy += top;
+  else if (bottom !== null) dy -= bottom + nodeH;
+  return { dx, dy };
+}
+
 // ── Shadow helper ─────────────────────────────────────────────────────────
 
 // Parses CSS `backdrop-filter: blur(20px) saturate(180%)` into a Figma
@@ -636,8 +724,10 @@ async function buildNode(
     // NOTE: no applyTransform here — the screenshot already has the element's
     // transform/filter/clip baked into its pixels, and x/y/w/h is its rendered
     // bounding box. Re-applying the transform would double it.
-    rect.x = x;
-    rect.y = y;
+    const { dx, dy } = positionOffset(capture.style, w, h);
+    rect.x = x + dx;
+    rect.y = y + dy;
+    applyPerChildExtras(rect as any, capture.style);
     return;
   }
 
@@ -684,15 +774,70 @@ async function buildNode(
         frame.fills = resolveFills(capture.style, false);
       }
 
-      // Stroke
+      // Stroke — borders + outlines.
+      // CSS allows per-side border-width / -colour / -style; Figma has only one
+      // uniform stroke. We collapse to uniform when all four sides agree, and
+      // when they differ we fall back to the T/B/L/R values directly via
+      // strokeTopWeight/LeftWeight/etc. (Figma supports per-side weight + colour
+      // for FrameNode as of 2024+).
       let hasStroke = false;
-      if (capture.style.borderStyle !== 'none') {
-        const bc = parseCssColor(capture.style.borderColor);
-        const bw = parsePx(capture.style.borderWidth);
-        if (bc && bw > 0) {
-          frame.strokes      = [{ type: 'SOLID', color: bc.color, opacity: bc.opacity }];
-          frame.strokeWeight = bw;
-          frame.strokeAlign  = 'INSIDE';
+      const st = capture.style;
+      const sideStyle = (s?: string) => (s && s !== 'none' ? s : null);
+      const sideWidth = (s?: string) => parsePx(s || '0px');
+      const topS = sideStyle(st.borderTopStyle),    rightS = sideStyle(st.borderRightStyle);
+      const botS = sideStyle(st.borderBottomStyle), leftS = sideStyle(st.borderLeftStyle);
+      const topW = sideWidth(st.borderTopWidth),    rightW = sideWidth(st.borderRightWidth);
+      const botW = sideWidth(st.borderBottomWidth), leftW = sideWidth(st.borderLeftWidth);
+      const sides = [
+        ['top', topS, topW, st.borderTopColor],
+        ['right', rightS, rightW, st.borderRightColor],
+        ['bottom', botS, botW, st.borderBottomColor],
+        ['left', leftS, leftW, st.borderLeftColor],
+      ] as const;
+      const anySideBorder = sides.some(([, s, w]) => s && w > 0);
+      if (anySideBorder) {
+        // Uniform check: same style + same width + same colour on all four sides.
+        const allSame = sides.every(([, s, w, c]) =>
+          s === topS && w === topW && c === sides[0][3]
+        );
+        if (allSame && topS && topW > 0) {
+          const bc = parseCssColor(sides[0][3] || st.borderColor);
+          if (bc) {
+            frame.strokes      = [{ type: 'SOLID', color: bc.color, opacity: bc.opacity }];
+            frame.strokeWeight = topW;
+            frame.strokeAlign  = 'INSIDE';
+            hasStroke = true;
+          }
+        } else {
+          // Non-uniform: per-side weights + colours via Figma FrameNode API.
+          // strokeTopWeight / strokeBottomWeight etc. accept numeric weights.
+          // strokeTopColor / strokeRightColor etc. accept SolidPaint values.
+          let primaryColour: SolidPaint | null = null;
+          for (const [side, s, w, c] of sides) {
+            if (!s || w <= 0) continue;
+            const col = parseCssColor(c || st.borderColor);
+            if (!col) continue;
+            const paint: SolidPaint = { type: 'SOLID', color: col.color, opacity: col.opacity };
+            try {
+              if (side === 'top') {
+                (frame as any).strokeTopWeight    = w;
+                (frame as any).strokeTopColor     = paint;
+              } else if (side === 'right') {
+                (frame as any).strokeRightWeight  = w;
+                (frame as any).strokeRightColor   = paint;
+              } else if (side === 'bottom') {
+                (frame as any).strokeBottomWeight = w;
+                (frame as any).strokeBottomColor  = paint;
+              } else if (side === 'left') {
+                (frame as any).strokeLeftWeight   = w;
+                (frame as any).strokeLeftColor    = paint;
+              }
+              if (!primaryColour) primaryColour = paint;
+            } catch { /* older runtime: fall through */ }
+          }
+          // Per-side strokes can render with mixed aligns; CSS defaults to
+          // INSIDE for borders — emulate that by setting the overall align.
+          frame.strokeAlign = 'INSIDE';
           hasStroke = true;
         }
       }
@@ -726,7 +871,9 @@ async function buildNode(
       if (parentIsAutoLayout) {
         try { frame.layoutPositioning = 'ABSOLUTE'; } catch {}
       }
-      applyTransform(frame, capture.style, x, y);
+      const fOff = positionOffset(capture.style, w, h);
+      applyTransform(frame, capture.style, x + fOff.dx, y + fOff.dy);
+      applyPerChildExtras(frame as any, capture.style);
 
       // Build children (they are already relative to this frame's origin)
       // Fresha's gradient-text cascade: a non-text frame with `bgClip:text` and
@@ -796,6 +943,14 @@ async function buildNode(
 
       text.characters = capture.text ?? '';
 
+      // CSS writing-mode (vertical-rl / vertical-lr / sideways-rl / sideways-lr)
+      // → Figma text rotation. Only cardinal angles are representable, so
+      // vertical-lr maps to 270°. Skip horizontal-tb (the default).
+      const wmRot = writingModeRotation(capture.style.writingMode);
+      if (wmRot !== 0) {
+        try { text.rotation = wmRot; } catch { /* older runtime */ }
+      }
+
       // Sizing strategy. The capture bakes hard '\n' line breaks into multi-line
       // text, so we ALWAYS use WIDTH_AND_HEIGHT: Figma honours the explicit breaks
       // and hugs the content, never re-wrapping with its own font. This is the key
@@ -811,7 +966,9 @@ async function buildNode(
         try { (text as any).textTruncation = 'ENDING'; } catch { /* older runtime */ }
         parent.appendChild(text);
         if (parentIsAutoLayout) { try { text.layoutPositioning = 'ABSOLUTE'; } catch {} }
-        applyTransform(text, capture.style, x, y);
+        const tOff = positionOffset(capture.style, w, h);
+        applyTransform(text, capture.style, x + tOff.dx, y + tOff.dy);
+        applyPerChildExtras(text as any, capture.style);
         break;
       }
       text.textAutoResize = 'WIDTH_AND_HEIGHT';
@@ -827,7 +984,9 @@ async function buildNode(
       if (parentIsAutoLayout) {
         try { text.layoutPositioning = 'ABSOLUTE'; } catch {}
       }
-      applyTransform(text, capture.style, x + xOffset, y);
+      const tOff2 = positionOffset(capture.style, w, h);
+      applyTransform(text, capture.style, x + xOffset + tOff2.dx, y + tOff2.dy);
+      applyPerChildExtras(text as any, capture.style);
       break;
     }
 
@@ -849,7 +1008,9 @@ async function buildNode(
           if (parentIsAutoLayout) {
             try { (svgNode as any).layoutPositioning = 'ABSOLUTE'; } catch {}
           }
-          applyTransform(svgNode as any, capture.style, x, y);
+          const svgOff = positionOffset(capture.style, w, h);
+          applyTransform(svgNode as any, capture.style, x + svgOff.dx, y + svgOff.dy);
+          applyPerChildExtras(svgNode as any, capture.style);
           break;
         } catch { /* fall through to raster/placeholder frame */ }
       }
@@ -864,7 +1025,7 @@ async function buildNode(
       if (imgSrc && imageBytes[imgSrc]) {
         try {
           const img = figma.createImage(imageBytes[imgSrc]);
-          frame.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: 'FIT' }];
+          frame.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: mapObjectFit(capture.style.objectFit) }];
         } catch { frame.fills = [{ type: 'SOLID', color: { r: 0.88, g: 0.88, b: 0.92 } }]; }
       } else {
         frame.fills = [{ type: 'SOLID', color: { r: 0.88, g: 0.88, b: 0.92 } }];
@@ -888,7 +1049,9 @@ async function buildNode(
       // collapse to a thin vertical slice on the parent's right edge.
       try { frame.resizeWithoutConstraints(w, h); } catch { frame.resize(w, h); }
 
-      applyTransform(frame, capture.style, x, y);
+      const imgOff = positionOffset(capture.style, w, h);
+      applyTransform(frame, capture.style, x + imgOff.dx, y + imgOff.dy);
+      applyPerChildExtras(frame as any, capture.style);
 
       for (const child of sortByZIndex(capture.children))
         await buildNode(child, frame, imageBytes, cascadeGradient ?? null);

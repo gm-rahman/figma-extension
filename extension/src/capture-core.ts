@@ -88,6 +88,71 @@ function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
     borderColor:        s.borderColor,
     borderWidth:        s.borderWidth,
     borderStyle:        s.borderStyle,
+    borderTopStyle:     (s as any).borderTopStyle || 'none',
+    borderRightStyle:   (s as any).borderRightStyle || 'none',
+    borderBottomStyle:  (s as any).borderBottomStyle || 'none',
+    borderLeftStyle:    (s as any).borderLeftStyle || 'none',
+    borderTopWidth:     (s as any).borderTopWidth || '0px',
+    borderRightWidth:   (s as any).borderRightWidth || '0px',
+    borderBottomWidth:  (s as any).borderBottomWidth || '0px',
+    borderLeftWidth:    (s as any).borderLeftWidth || '0px',
+    borderTopColor:     (s as any).borderTopColor || s.borderColor,
+    borderRightColor:   (s as any).borderRightColor || s.borderColor,
+    borderBottomColor:  (s as any).borderBottomColor || s.borderColor,
+    borderLeftColor:    (s as any).borderLeftColor || s.borderColor,
+    // CSS4 logical-property borders
+    borderBlockStartStyle: (s as any).borderBlockStartStyle || 'none',
+    borderBlockEndStyle:   (s as any).borderBlockEndStyle   || 'none',
+    borderInlineStartStyle:(s as any).borderInlineStartStyle|| 'none',
+    borderInlineEndStyle:  (s as any).borderInlineEndStyle  || 'none',
+    borderBlockStartWidth: (s as any).borderBlockStartWidth || '0px',
+    borderBlockEndWidth:   (s as any).borderBlockEndWidth   || '0px',
+    borderInlineStartWidth:(s as any).borderInlineStartWidth|| '0px',
+    borderInlineEndWidth:  (s as any).borderInlineEndWidth  || '0px',
+    borderBlockStartColor: (s as any).borderBlockStartColor || s.borderColor,
+    borderBlockEndColor:   (s as any).borderBlockEndColor   || s.borderColor,
+    borderInlineStartColor:(s as any).borderInlineStartColor|| s.borderColor,
+    borderInlineEndColor:  (s as any).borderInlineEndColor  || s.borderColor,
+    borderStartStartRadius:(s as any).borderStartStartRadius|| '0px',
+    borderStartEndRadius:  (s as any).borderStartEndRadius  || '0px',
+    borderEndStartRadius:  (s as any).borderEndStartRadius  || '0px',
+    borderEndEndRadius:    (s as any).borderEndEndRadius    || '0px',
+    borderImageSource: (s as any).borderImageSource || 'none',
+    borderImageSlice:  (s as any).borderImageSlice  || '100%',
+    borderImageWidth:  (s as any).borderImageWidth  || '1',
+    borderImageRepeat: (s as any).borderImageRepeat || 'stretch',
+    borderImageOutset: (s as any).borderImageOutset || '0',
+    cornerTopLeftShape:    (s as any).cornerTopLeftShape    || 'round',
+    cornerTopRightShape:   (s as any).cornerTopRightShape   || 'round',
+    cornerBottomRightShape:(s as any).cornerBottomRightShape|| 'round',
+    cornerBottomLeftShape: (s as any).cornerBottomLeftShape || 'round',
+    animationName:           (s as any).animationName           || 'none',
+    animationDuration:       (s as any).animationDuration       || '0s',
+    animationTimingFunction: (s as any).animationTimingFunction || 'ease',
+    animationIterationCount: (s as any).animationIterationCount || '1',
+    animationDelay:          (s as any).animationDelay          || '0s',
+    animationDirection:     (s as any).animationDirection     || 'normal',
+    animationFillMode:       (s as any).animationFillMode       || 'none',
+    animationPlayState:      (s as any).animationPlayState      || 'running',
+    fontStretch:        (s as any).fontStretch || '100%',
+    fontVariant:        (s as any).fontVariant || 'normal',
+    fontVariantCaps:    (s as any).fontVariantCaps || 'normal',
+    fontVariantNumeric: (s as any).fontVariantNumeric || 'normal',
+    fontVariantLigatures:(s as any).fontVariantLigatures || 'normal',
+    columnRuleStyle: (s as any).columnRuleStyle || 'none',
+    columnRuleWidth: (s as any).columnRuleWidth || 'medium',
+    columnRuleColor: (s as any).columnRuleColor || s.color,
+    fill:           (s as any).fill           || 'rgb(0, 0, 0)',
+    stroke:         (s as any).stroke         || 'none',
+    strokeWidth:    (s as any).strokeWidth    || '1px',
+    strokeDasharray:(s as any).strokeDasharray|| 'none',
+    strokeLinecap:  (s as any).strokeLinecap  || 'butt',
+    strokeLinejoin: (s as any).strokeLinejoin || 'miter',
+    fillRule:       (s as any).fillRule       || 'nonzero',
+    appearance:        (s as any).appearance        || 'auto',
+    backfaceVisibility:(s as any).backfaceVisibility|| 'visible',
+    containerType:     (s as any).containerType     || 'normal',
+    containerName:     (s as any).containerName     || 'none',
     outlineStyle:       s.outlineStyle,
     outlineWidth:       s.outlineWidth,
     outlineColor:       s.outlineColor,
@@ -107,6 +172,7 @@ function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
     justifyContent:     s.justifyContent,
     alignItems:         s.alignItems,
     alignContent:       s.alignContent,
+    alignSelf:          (s as any).alignSelf || 'auto',
     flexWrap:           s.flexWrap,
     flexGrow:           s.flexGrow,
     flexShrink:         s.flexShrink,
@@ -118,6 +184,125 @@ function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
     gridTemplateRows:   s.gridTemplateRows,
     overflowX:          s.overflowX,
     overflowY:          s.overflowY,
+    top:                (s as any).top || 'auto',
+    right:              (s as any).right || 'auto',
+    bottom:             (s as any).bottom || 'auto',
+    left:               (s as any).left || 'auto',
+    inset:              (s as any).inset || 'auto',
+    insetBlockStart:    (s as any).insetBlockStart    || 'auto',
+    insetBlockEnd:      (s as any).insetBlockEnd      || 'auto',
+    insetInlineStart:   (s as any).insetInlineStart   || 'auto',
+    insetInlineEnd:     (s as any).insetInlineEnd     || 'auto',
+    paddingBlockStart:  (s as any).paddingBlockStart  || s.paddingTop,
+    paddingBlockEnd:    (s as any).paddingBlockEnd    || s.paddingBottom,
+    paddingInlineStart: (s as any).paddingInlineStart || s.paddingLeft,
+    paddingInlineEnd:   (s as any).paddingInlineEnd   || s.paddingRight,
+    marginBlockStart:   (s as any).marginBlockStart   || s.marginTop,
+    marginBlockEnd:     (s as any).marginBlockEnd     || s.marginBottom,
+    marginInlineStart:  (s as any).marginInlineStart  || s.marginLeft,
+    marginInlineEnd:    (s as any).marginInlineEnd    || s.marginRight,
+    blockSize:          (s as any).blockSize          || 'auto',
+    inlineSize:         (s as any).inlineSize         || 'auto',
+    maxBlockSize:       (s as any).maxBlockSize       || 'none',
+    maxInlineSize:      (s as any).maxInlineSize      || 'none',
+    minBlockSize:       (s as any).minBlockSize       || 'auto',
+    minInlineSize:      (s as any).minInlineSize      || 'auto',
+    overflowBlock:      (s as any).overflowBlock      || 'visible',
+    overflowInline:     (s as any).overflowInline     || 'visible',
+    boxSizing:          (s as any).boxSizing || 'content-box',
+    aspectRatio:        (s as any).aspectRatio || 'auto',
+    objectFit:          (s as any).objectFit || 'fill',
+    objectPosition:     (s as any).objectPosition || '50% 50%',
+    cursor:             s.cursor || 'auto',
+    willChange:         (s as any).willChange || 'auto',
+    contain:            (s as any).contain || 'none',
+    mixBlendMode:       (s as any).mixBlendMode || 'normal',
+    isolation:          (s as any).isolation || 'auto',
+    clipPath:           (s as any).clipPath || 'none',
+    maskImage:          (s as any).maskImage || 'none',
+    transformStyle:     (s as any).transformStyle || 'flat',
+    writingMode:        (s as any).writingMode || 'horizontal-tb',
+    textOrientation:    (s as any).textOrientation || 'mixed',
+    caretColor:         (s as any).caretColor || s.color || 'rgb(0,0,0)',
+    // Scroll margins / paddings
+    scrollMarginTop:    (s as any).scrollMarginTop    || '0px',
+    scrollMarginRight:  (s as any).scrollMarginRight  || '0px',
+    scrollMarginBottom: (s as any).scrollMarginBottom || '0px',
+    scrollMarginLeft:   (s as any).scrollMarginLeft   || '0px',
+    scrollMarginBlockStart:  (s as any).scrollMarginBlockStart  || '0px',
+    scrollMarginBlockEnd:    (s as any).scrollMarginBlockEnd    || '0px',
+    scrollMarginInlineStart: (s as any).scrollMarginInlineStart || '0px',
+    scrollMarginInlineEnd:   (s as any).scrollMarginInlineEnd   || '0px',
+    scrollPaddingTop:   (s as any).scrollPaddingTop   || 'auto',
+    scrollPaddingRight: (s as any).scrollPaddingRight || 'auto',
+    scrollPaddingBottom:(s as any).scrollPaddingBottom|| 'auto',
+    scrollPaddingLeft:  (s as any).scrollPaddingLeft  || 'auto',
+    scrollPaddingBlockStart:  (s as any).scrollPaddingBlockStart  || 'auto',
+    scrollPaddingBlockEnd:    (s as any).scrollPaddingBlockEnd    || 'auto',
+    scrollPaddingInlineStart: (s as any).scrollPaddingInlineStart || 'auto',
+    scrollPaddingInlineEnd:   (s as any).scrollPaddingInlineEnd   || 'auto',
+    // Row-rule (CSS4 multi-column row separator)
+    rowRuleStyle: (s as any).rowRuleStyle || 'none',
+    rowRuleWidth: (s as any).rowRuleWidth || 'medium',
+    rowRuleColor: (s as any).rowRuleColor || s.color,
+    // Text-decoration longhands
+    textDecoration:           (s as any).textDecoration           || 'none',
+    textDecorationLine:       (s as any).textDecorationLine       || 'none',
+    textDecorationStyle:      (s as any).textDecorationStyle      || 'solid',
+    textDecorationColor:      (s as any).textDecorationColor      || s.color,
+    textDecorationThickness:  (s as any).textDecorationThickness  || 'auto',
+    textDecorationSkipInk:    (s as any).textDecorationSkipInk    || 'auto',
+    // Text-emphasis
+    textEmphasisColor:    (s as any).textEmphasisColor    || s.color,
+    textEmphasisStyle:    (s as any).textEmphasisStyle    || 'none',
+    textEmphasisPosition: (s as any).textEmphasisPosition || 'over right',
+    // Text-underline
+    textUnderlineOffset:   (s as any).textUnderlineOffset   || 'auto',
+    textUnderlinePosition: (s as any).textUnderlinePosition || 'auto',
+    // Text-wrap / white-space-collapse
+    textWrapMode:        (s as any).textWrapMode        || 'wrap',
+    textWrapStyle:       (s as any).textWrapStyle       || 'auto',
+    whiteSpaceCollapse:  (s as any).whiteSpaceCollapse  || 'collapse',
+    // Overscroll / scrollbar
+    overscrollBehaviorX:     (s as any).overscrollBehaviorX     || 'auto',
+    overscrollBehaviorY:     (s as any).overscrollBehaviorY     || 'auto',
+    overscrollBehaviorBlock: (s as any).overscrollBehaviorBlock || 'auto',
+    overscrollBehaviorInline:(s as any).overscrollBehaviorInline|| 'auto',
+    scrollbarColor:   (s as any).scrollbarColor   || 'auto',
+    scrollbarGutter:  (s as any).scrollbarGutter  || 'auto',
+    scrollbarWidth:   (s as any).scrollbarWidth   || 'auto',
+    // CSS4 scroll-driven animation timelines
+    scrollTimelineName:  (s as any).scrollTimelineName  || 'none',
+    scrollTimelineAxis:  (s as any).scrollTimelineAxis  || 'block',
+    viewTimelineName:    (s as any).viewTimelineName    || 'none',
+    viewTimelineAxis:    (s as any).viewTimelineAxis    || 'block',
+    viewTimelineInset:   (s as any).viewTimelineInset   || '0',
+    timelineTriggerName:                  (s as any).timelineTriggerName                  || 'none',
+    timelineTriggerSource:                (s as any).timelineTriggerSource                || 'auto',
+    timelineTriggerScope:                 (s as any).timelineTriggerScope                 || 'all',
+    timelineTriggerActiveRangeStart:      (s as any).timelineTriggerActiveRangeStart      || 'auto',
+    timelineTriggerActiveRangeEnd:        (s as any).timelineTriggerActiveRangeEnd        || 'auto',
+    timelineTriggerActivationRangeStart:  (s as any).timelineTriggerActivationRangeStart  || 'auto',
+    timelineTriggerActivationRangeEnd:    (s as any).timelineTriggerActivationRangeEnd    || 'auto',
+    animationTimeline:   (s as any).animationTimeline   || 'auto',
+    animationRangeStart: (s as any).animationRangeStart || 'normal',
+    animationRangeEnd:   (s as any).animationRangeEnd   || 'normal',
+    // CSS Anchor Positioning
+    positionAnchor:      (s as any).positionAnchor      || 'auto',
+    positionArea:        (s as any).positionArea        || 'none',
+    positionTryFallbacks:(s as any).positionTryFallbacks|| 'none',
+    positionTryOrder:    (s as any).positionTryOrder    || 'normal',
+    positionVisibility:  (s as any).positionVisibility  || 'always',
+    anchorName:          (s as any).anchorName          || 'none',
+    anchorScope:         (s as any).anchorScope         || 'all',
+    // View Transitions API
+    viewTransitionName:  (s as any).viewTransitionName  || 'none',
+    viewTransitionClass: (s as any).viewTransitionClass || 'none',
+    viewTransitionGroup: (s as any).viewTransitionGroup || 'auto',
+    viewTransitionScope: (s as any).viewTransitionScope || 'root',
+    fieldSizing:  (s as any).fieldSizing  || 'fixed',
+    readingFlow:  (s as any).readingFlow  || 'normal',
+    readingOrder: (s as any).readingOrder || '0',
     backdropFilter:     (s as any).backdropFilter || (s as any).webkitBackdropFilter || 'none',
     // Fresha's "gradient text" pattern paints an element's text in the parent
     // gradient's colour by combining `background-clip: text` with
@@ -323,6 +508,8 @@ function rasterizeReason(el: Element, s: CSSStyleDeclaration): string {
 
   if (tag === 'canvas') return '<canvas> element';
   if (tag === 'video')  return '<video> element';
+  if (tag === 'iframe') return '<iframe> element';
+  if (tag === 'embed' || tag === 'object') return `<${tag}> element`;
 
   if (s.clipPath && s.clipPath !== 'none')             return `clip-path: ${s.clipPath}`;
   const mask = s.mask || (s as any).webkitMask;
@@ -756,6 +943,9 @@ function classifyElement(el: Element): CaptureNode['type'] {
   if (tag === 'img') return 'image';
   if (tag === 'video') return 'image';   // captured via its poster frame
   if (tag === 'picture') return 'image';  // collapse to its inner <img> (no wrapper frame)
+  if (tag === 'iframe') return 'image';   // recurse into the iframe document OR rasterize the frame
+  if (tag === 'embed' || tag === 'object') return 'image';  // embedded media → raster
+  if (tag === 'canvas') return 'image';   // canvas surfaces rasterize as a frame
   if (tag === 'svg' || el.closest('svg')) return 'image';
 
   const s = window.getComputedStyle(el);
@@ -1254,6 +1444,11 @@ function serializeElement(
       // shown before playback). Falls back to the element's background.
       const v = el as HTMLVideoElement;
       node.src = v.poster || node.style.backgroundImageUrl || undefined;
+    } else if (tag === 'iframe') {
+      // <iframe> can't render in Figma — capture as a raster screenshot
+      // (set src as URL for reference; the raster pipeline does the work).
+      const fr = el as HTMLIFrameElement;
+      node.src = fr.src || undefined;
     } else if (tag === 'svg') {
       // Serialize the SVG root so the plugin can build NATIVE Figma vector layers
       // (editable shapes) via figma.createNodeFromSvgAsync.
