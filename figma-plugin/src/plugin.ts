@@ -617,7 +617,6 @@ async function buildNode(
   if (capture.rasterize && capture.rasterId && imageBytes[capture.rasterId]) {
     const rect = figma.createRectangle();
     rect.name = `raster: ${capture.name}`;
-    rect.resize(w, h);
     rect.opacity = opacity;
     applyCornerRadii(rect, capture.style);
     try {
@@ -626,8 +625,14 @@ async function buildNode(
     } catch {
       rect.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.92 } }];
     }
+    // Resize before append so the auto-layout pass sees the correct size.
+    rect.resize(w, h);
     parent.appendChild(rect);
     if (parentIsAutoLayout) { try { rect.layoutPositioning = 'ABSOLUTE'; } catch {} }
+    // Re-apply size after auto-layout + ABSOLUTE as a safety net against any
+    // size quirks in flex containers (mirrors the same pattern in the 'image'
+    // branch below for non-rasterized pictures).
+    try { rect.resizeWithoutConstraints(w, h); } catch { rect.resize(w, h); }
     // NOTE: no applyTransform here — the screenshot already has the element's
     // transform/filter/clip baked into its pixels, and x/y/w/h is its rendered
     // bounding box. Re-applying the transform would double it.
@@ -852,7 +857,6 @@ async function buildNode(
       const frame = figma.createFrame();
       const imgSrc = capture.src ?? capture.style.backgroundImageUrl;
       frame.name         = imgSrc ? `img: ${imgSrc.split('/').pop()?.slice(0, 40)}` : capture.name;
-      frame.resize(w, h);
       frame.opacity      = opacity;
       applyCornerRadii(frame, capture.style);
       frame.clipsContent = true;
@@ -866,11 +870,24 @@ async function buildNode(
         frame.fills = [{ type: 'SOLID', color: { r: 0.88, g: 0.88, b: 0.92 } }];
       }
 
+      // Resize BEFORE append so the auto-layout pass sees the correct size
+      // for a non-absolute child (the brief moment before we mark it ABSOLUTE).
+      frame.resize(w, h);
+
       parent.appendChild(frame);
 
       if (parentIsAutoLayout) {
         try { frame.layoutPositioning = 'ABSOLUTE'; } catch {}
       }
+
+      // Belt-and-suspenders: re-apply size after auto-layout + ABSOLUTE so
+      // any quirk that shrinks the frame (e.g. image-fill auto-sizing on
+      // appendChild in some Figma versions) is overridden by the captured
+      // exact dimensions. Without this, an image frame inside a HORIZONTAL
+      // auto-layout with justifyContent:flex-end has been observed to
+      // collapse to a thin vertical slice on the parent's right edge.
+      try { frame.resizeWithoutConstraints(w, h); } catch { frame.resize(w, h); }
+
       applyTransform(frame, capture.style, x, y);
 
       for (const child of sortByZIndex(capture.children))
