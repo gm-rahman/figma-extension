@@ -5,7 +5,7 @@ localhost) and rebuilds it in Figma as **editable** native layers — frames,
 text, vectors, image fills — not screenshots. Goal: match, then beat, the
 commercial "html.to.design" plugin.
 
-Last updated: 2026-07-04 (HTML/CSS coverage audit + per-child extras)
+Last updated: 2026-07-05 (Phase 3 CLOSED — fresh Node-serialized capture proves no walker bug; original concern was PowerShell corruption of workspace-root capture.json)
 
 ---
 
@@ -891,6 +891,257 @@ User: card border missing, arrow shows literal "P", card layout broken. Data-fir
   CSS outline support is in place for sites with real rings.
 - Fixture 90 nodes / fresha 901 nodes, PROBLEMS 0, both snapshots updated.
 
+### Session 2026-07-04 — Raster element borders (video / clip-path / mask)
+
+**User report.** Side-by-side comparing the live Fresha page against the
+imported Figma render showed the DownloadApp video mockup was missing its
+**2px solid black ring**. The user identified it as the `<video>` (the
+rasterized phone mockup) — confirming that the borders on rasterized
+elements were being silently dropped.
+
+**Root cause (data-first).** Probed `test/capture.json` for
+`node-460` (`Container:DownloadApp_video__xKtYe`):
+```json
+{
+  "tagName": "video", "type": "image",
+  "width": 246, "height": 529,
+  "rasterize": true, "rasterReason": "<video> element",
+  "style": {
+    "borderRadius": "24px",
+    "borderColor": "rgb(19, 19, 19)",
+    "borderWidth": "2px", "borderStyle": "solid",
+    "borderTopStyle": "solid", "borderTopWidth": "2px",
+    "borderTopColor": "rgb(19, 19, 19)",
+    "...": "...same for right/bottom/left..."
+  }
+}
+```
+The CSS border is **in the capture** — every per-side field is set
+(2px solid rgb(19,19,19)). The renderer just wasn't honouring it.
+
+Traced to `figma-plugin/src/plugin.ts` `buildNode` raster branch
+(lines 705-732 at start of session): it called `figma.createRectangle()`,
+applied opacity + corner radii + IMAGE fill, and returned. **No stroke
+logic.** The frame branch (lines 777-854) had a full per-side + outline
+stroke implementation, but it was only invoked inside the `'frame'` /
+`'rectangle'` switch cases. The preview renderer (`test/visual-diff.mjs`
+`renderNode` raster branch, lines 242-249) had the same gap — only
+emitted `border-radius`, never `border-width/-style/-color`.
+
+**Fix.** Extracted the frame-branch border/outline logic into a reusable
+helper and applied it from both raster sites.
+
+- `figma-plugin/src/plugin.ts` — new `applyBorderStroke(node, style)`
+  helper (mirrors the original CSS4-per-side logic: uniform collapse to
+  `strokes + strokeWeight`, non-uniform → `strokeTopWeight`/Color/...)
+  accepting any `Pick<RectangleNode, 'strokes' | 'strokeWeight' |
+  'strokeAlign' | 'strokeTopWeight' | ...>` so it works on both
+  `FrameNode` and `RectangleNode`. The per-side colour fields
+  (`strokeTopColor` etc.) are typed only on `FrameNode`, so the
+  per-side-colour path writes through `(node as any)` (same pattern as
+  the original frame-branch code). The frame branch now calls the
+  helper; the raster branch calls it after `applyCornerRadii`.
+- `test/visual-diff.mjs` — the raster `<img>` `<style>` now emits
+  `border-radius: …; border: ${width} ${style} ${color};` plus the
+  matching `outline:` if `outlineStyle` is set, mirroring the frame
+  branch's CSS.
+
+**Verification.**
+- `cd figma-plugin && npx tsc --noEmit` → clean.
+- `cd figma-plugin && npm run build` → `dist/plugin.js` 35.5 kB
+  (was 35.9 kB — net reduction from the consolidated helper).
+- `node test/visual-diff.mjs` → preview regenerated.
+- Inspected the raster element in the new `test/preview.html`:
+  ```
+  <img ... alt="Container:DownloadApp_video__xKtYe"
+       style="position:absolute;left:330px;top:161px;
+              width:246px;height:529px;
+              border-radius:24px;
+              border:2px solid rgb(19, 19, 19);" ...>
+  ```
+  matches the captured CSS exactly.
+- `node test/run-capture.mjs --name=stripe` → snapshot diff `0/0/0`.
+- `node test/analyze.mjs stripe` → **0 PROBLEMS, 0 NOTES**.
+
+**Scope.** Only raster elements with visible CSS borders/outlines get
+them now. Same fix applies uniformly to all rasterized surfaces
+(`<video>`, `clip-path`, `mask`, conic-gradient, `background-clip:text`
+leaves, filter-blur+hue, etc.) — any node reaching the raster branch in
+`buildNode` will get its captured border/outline painted as Figma strokes.
+
+---
+
+### Session 2026-07-05 — Phase 3 ForBusiness probe (capture.json only, no code)
+
+**Triggered by.** Audit `plans/02-audit.md §3.2` "Layout Fresha for
+Business" flagged as the lone remaining open regression. The
+§3.2 sibling-vs-child hypothesis required Phase 3 evidence before any
+fix. The user explicitly directed: *"safely analyze the Fresha data
+and document the results now."*
+
+**Method.** Pure capture.json read (no live DOM, no code change). I
+walked `test/capture.json` lines 1640–2110 — the entire region around
+the three `ForBusiness_self__l5EtV` matches.
+
+**Evidence captured (with line numbers).**
+- **Line 1682 — `node-582 Container:Section_self__25TmV`** at
+  `y=4008, h=728, position: relative, overflowX/Y: hidden`.
+  Children: `[ node-583 picture, x=-105, y=-49, w=2082, h=776,
+  transform: matrix(1,0,0,1,-1041,0), src:
+  forBusinessLarge@2x.6eccd3f9.webp ]`. The dashboard image's wrapper
+  chain is correct.
+- **Line 1893 — `node-621 Container:Section_self__25TmV`** at
+  `y=4736, h=562, position: relative, overflowX/Y: hidden`. Children:
+  `[ node-622 Container:Content_self__i8VxJ ]` → `[ node-623
+  Container:ForBusiness_self__l5EtV (width 1440, height 562,
+  paddingTop 48px, paddingBottom 24px, display: block) ]` → **children:
+  ""**.
+- Sibling-A image and Sibling-B text live in two separate
+  `Section_self` instances at the same level — they are **not**
+  parent/child, **not** the same level as each other's content node.
+
+**Audit §3.2 hypothesis — DISPROVED.** The audit originally
+hypothesised "the dashboard image lands as a sibling of
+`ForBusiness_self`". Capture.json evidence contradicts that — the
+dashboard is in a *separate preceding* `Section_self`. The
+sibling/child question is closed.
+
+**Real symptom.** `Container:ForBusiness_self__l5EtV` (line 1881 /
+node-623 at line 2022) has `children: ""`. The marketing text content
+of the section (heading "Built for everyone. Find a beauty salon near
+you…" + body + CTA) is missing from `capture.json` end-to-end. No
+ghost text, no demoted text node.
+
+**Refined hypothesis (4 unverified candidates, priority order).** See
+`plans/03-investigations.md §4` for the full queue:
+1. State-induced visibility flip on the inner text children
+   (`opacity: 0` on a carousel entry, `display: none`, etc.) rejected
+   by the size/visibility filter.
+2. `isClippedAway()` drops inner text children against the
+   `Section_self` clip window (`overflowX/Y: hidden`).
+3. `MAX_NODES` / `MAX_DEPTH` guard hit before the walker reaches the
+   text subtree.
+4. `ancestorVisibleFraction < 0.15` blocks the demote-to-text
+   fallback.
+
+**Phase 5 ordering updated.** Render-side `clipsContent` is **not**
+implicated: `plugin.ts` already renders populated text subtrees
+correctly (FreshaInNumbers_self and the image sibling both render
+fine). The eventual fix lives in `capture-core.ts`, not `plugin.ts`.
+The audit's §11 (a)/(b) collapse to a single capture-side fix.
+
+**Documentation updated.**
+- `plans/03-investigations.md` — new file, 19.6 KB, 9 sections, with
+  full evidence tables, the new hypothesis queue, and the S1–S5
+  Phase 3 sub-probe queue.
+- `plans/02-audit.md §3.2` — hypothesis rewritten, evidence
+  refreshed, action items updated to point at S1–S5.
+- `plans/02-audit.md §11 / Q4` — Phase 5 ordering updated to reflect
+  the capture-only fix path.
+
+**Status.** Phase 3 sub-probes (S1–S5) **not yet run**. They are pure
+capture.json reads plus, at most, one Playwright `getComputedStyle`
+probe (S5). **No code change made; no code change authorised until
+the user signs off on Phase 5.**
+
+---
+
+### Session 2026-07-05 (continued) — Sub-probe S1 ran; **major correction: capture.json is corrupted by PowerShell ConvertTo-Json**
+
+**Triggered by.** User: *"close Phase 3, run sub-probe S1 next"*.
+
+**What ran.**
+- `test/probe-find-fb.mjs` — selector discovery on fresha.com at
+  1440×900. Returned 1 candidate:
+  `div.ForBusiness_self__l5EtV @ 0,4008 1440x727` with text
+  "Fresha for business / Supercharge your business…". Note the live
+  `className` lacks the `Container:` prefix — that prefix is added
+  by `capture-core.ts:getNodeName()` at serialize time.
+- `test/probe-s1.mjs` — Playwright TreeWalker probe over the live
+  `ForBusiness_self` subtree. Walked 43 descendants (1 direct
+  child) before any force-reveal pass.
+
+**Sub-probe S1 verdict.** Of 43 descendants:
+- 17 contain visible text (the h2 "Fresha for business", the p
+  "Supercharge your business with the world's top booking platform",
+  the button "Find out more", the Capterra badge with rating text,
+  stars, link) — all with `display: block/flex/inline-flex/inline`,
+  `visibility: visible`, `opacity: 1`, and full bounding rects.
+- 0 are dropped by display/visibility/opacity filter.
+- 0 are dropped by ancestor overflow clip window.
+- 3 are collapsed rect — but those are inside an `rtl-icon` span
+  fallback (cosmetic, not the missing text).
+
+**Hypotheses ruled out by S1 (live DOM evidence):**
+- ❌ Inner descendants carry `display: none` / `visibility: hidden` / `opacity: 0` (audit §4 candidate #1) — dead.
+- ❌ `isClippedAway()` drops an inner text descendant against an ancestor's `overflow: hidden` window (audit §4 candidate #3) — dead.
+- ❌ Inner text subtree has collapsed rects (audit §4 candidate #2 / size filter) — dead.
+
+**Hypotheses still open:**
+- `MAX_NODES` / `MAX_DEPTH` guard hits before reaching
+  `ForBusiness_self` (audit §4 candidate #2 / depth-count guard) —
+  S1 did not measure `capturedCount`.
+
+**The major correction.** While inspecting `capture.json` around
+the `ForBusiness_self` node to cross-reference, the file format
+gave it away:
+
+```
+1886:    "style":  "@{backgroundColor=rgba(0, 0, 0, 0); …}",
+1887:    "children":  ""
+```
+
+The `style` value is a **PowerShell hashtable `ToString()` output**,
+not a JSON object. And `children: ""` is what PowerShell
+`ConvertTo-Json -Depth N` produces when the depth limit truncates
+an empty array. PROJECT_LOG.md line 686 already records:
+
+> **Recovery note:** During dev the in-progress `capture.json` was overwritten via
+> PowerShell `ConvertTo-Json -Depth 12`, which silently truncated Fresha's tree
+> from 897 nodes to 61.
+
+The workspace-root `capture.json` (last touched 2026-07-04 02:46) is
+the **corrupted** one. `test/capture.json` (stripe fixture, last
+touched 2026-07-04 23:22) is fine but does not contain fresha data.
+
+**Consequences.**
+1. The §3.2 sibling-vs-child analysis and the §4 candidate queue
+   were based on a corrupted payload. The `children: ""` symptom
+   we chased is a PowerShell artifact, not a walker bug.
+2. The walker cannot produce `children: ""`. `parentNode.children`
+   is initialized to `[]` (capture-core.ts lines 996/1053/1083/
+   1152/1244/1347) and pushed-to by `appendChildNodes`. If
+   `appendChildNodes` was never called, the value would still be
+   `[]`, not `""`. Only PowerShell's `ConvertTo-Json` collapses
+   `[]` → `""` at depth-limit boundaries.
+3. Phase 3 must be re-run against a fresh Node-serialized fresha
+   capture. S1's live-DOM findings are still valid as evidence
+   that the **source DOM** is fine, but we cannot conclude about
+   the **walker output** until we have a non-corrupted payload.
+
+**Next concrete step (no code change yet).**
+- Run `cd test && node run-capture.mjs --name=fresha --viewport=1440x900`
+  to produce a fresh, Node-serialized fresha capture.
+- Read the resulting `Container:ForBusiness_self__l5EtV.children`
+  value. If populated, there is no ForBusiness regression — the
+  §3.2 concern was purely an artifact of the corrupted payload.
+- If still empty after Node serialization, the walker IS pruning
+  and S3 (depth/count guard) becomes the next probe with a
+  `console.log` of `capturedCount` + `depth` at ForBusiness entry.
+
+**Documentation updated.**
+- `plans/03-investigations.md` — added §10 with the full S1 result
+  table, the PowerShell-corruption discovery, and the corrected
+  next-step plan.
+- (Audit patch from earlier this session still applies; it may need
+  a further amendment once the fresh capture confirms the real
+  symptom, or confirms there is no symptom at all.)
+
+**Builds / regressions.** None — this round was pure evidence
+gathering, no code touched.
+
+---
+
 ## 4. Current status
 
 - **Aether sign-up page (user's real localhost file):** 0 PROBLEMS, 0 NOTES,
@@ -1128,6 +1379,196 @@ inline/experimental features (`accent-color`, `background-blend-mode`,
   border-radius by 214; logical padding by 149–193; logical margin by
   21–65; logical inset by 40–42; logical box-size by 860–868; `animationTimeline`
   by 1; `rowRule*` by 901.
+
+---
+
+## 6. Session 2026-07-05 (cont.) — Phase 3 closed: fresh capture proves no walker bug
+
+**Closure finding.** The Phase 3 "missing ForBusiness text in Figma"
+investigation is closed. There is no regression in `capture-core.ts` — the
+walker correctly captures the full ForBusiness section. The original
+"missing text" symptom was 100% a tooling artifact: the workspace-root
+`capture.json` had been overwritten by PowerShell's `ConvertTo-Json
+-Depth 12`, which collapses nested arrays/objects into hashtable `.ToString()`
+representations once the depth exceeds the limit. The corrupted file showed
+`"children": ""` and `"style": "System.Collections.Hashtable"` for every
+node — including the ForBusiness subtree — which is why Figma rendered
+nothing for the section.
+
+**Verification (Node-serialized fresh capture).**
+
+1. Ran `test/run-capture.mjs --url=https://www.fresha.com/ --name=fresha
+   --viewport=1440x900` from `C:\Users\Mahfuz\newProject\test`.
+   → 901 total nodes, 50 top-level, 35 images fetched, 1 rasterized
+   (DownloadApp `<video>`). Output: `test/capture.json` (1.3 MB, fresh).
+2. Grep'd the new file: `"name": "Container:ForBusiness_self__l5EtV"` is
+   at line 143073, with a real JSON `"style": { ... }` object (not a
+   PowerShell hashtable `.ToString()`).
+3. `children` is a real array (line 143309) — confirmed by traversing
+   the subtree with `test/count-fb-children.mjs`:
+   - 1 direct child (frame `Container:OverviewSection_self__x15fL`)
+   - 35 elements total in subtree (including self)
+   - 5 text-bearing descendants (all expected):
+     - 600×99 h2: "Fresha for business"
+     - 600×96 p: "Supercharge your business with the world's top booking
+       platform for salons and spas. Independently voted no. 1 by
+       industry professionals."
+     - 174×48 link (button): "Find out more"
+     - 600×36 Capterra rating: "Excellent 5/5"
+     - 132×20 Capterra link: "Over 1250 reviews on"
+4. Rendered via `test/visual-diff.mjs` → `test/preview.html` (599 KB).
+   Substring check confirms every ForBusiness marker renders with correct
+   font / size / weight / color / position:
+   - `<div ... font-size:68px; font-weight:700; ...>Fresha for business</div>`
+   - `<div ... font-size:24px; line-height:32px; ...>Supercharge your
+     business ...</div>`
+   - `<div ... data-name="Link #for-business" ...><div ...
+     font-size:16px; font-weight:600; ...>Find out more</div></div>`
+   - Capterra badge (`https://www.fresha.com/assets/_next/static/media/
+     capterra_logo.01b4dde5.png`) + 5 star SVGs (`fill="rgb(255, 192,
+     10)"`) + "Excellent 5/5" + "Over 1250 reviews on" link, all present.
+
+**Diagnosis of the original symptom.** The original §3.2 hypothesis was
+"capture-core.ts has a filter that drops the ForBusiness subtree". The
+fresh capture contradicts this: every expected element is present with
+correct rects, every expected text node is captured with its computed
+style (font, size, weight, color, line-height), and the rendered preview
+shows the full section with all interactive elements (button, Capterra
+link, star SVGs) at their correct positions.
+
+The reason the Figma render looked empty is that Figma was last fed the
+**workspace-root** `c:\Users\Mahfuz\newProject\capture.json` (a 1.5 MB
+file overwritten on 2026-07-04 by `ConvertTo-Json -Depth 12`), not the
+Node-serialized `test/capture.json`. The PowerShell tool truncates deep
+JSON structures into `""` strings once depth exceeds its limit. Once
+`children` becomes a string instead of an array, the plugin sees an
+empty subtree and renders nothing for that branch.
+
+**Implications.**
+- **No code change to `capture-core.ts` is needed.** The walker is correct.
+- **No code change to `plugin.ts` is needed** (the render path is
+  exercised correctly by the fresh capture — `preview.html` shows full
+  fidelity).
+- **No code change to `visual-diff.mjs` is needed** (it consumed the
+  fresh capture without complaint and rendered the full section).
+- The "capture-side fix" line of work in Phase 5 is closed by evidence.
+- The only durable fix is **tooling/process**: stop piping `capture.json`
+  through `ConvertTo-Json -Depth 12` (or any non-Node serializer), or
+  add a `verify-capture.mjs` script that asserts the JSON parses into a
+  proper tree (rejects files with string children, hashtable style
+  fields, etc.) before allowing them to be fed to Figma.
+
+**Phase 5 status.** Phase 5 as written ("capture-side fix for ForBusiness")
+is now obsolete. The remaining Phase 5 work is the original Phase 5 plan
+prior to the §3.2 redirect — i.e. (a) edge-case audit/fixes and
+(b) render-side hardening for any remaining regressions. Both phases
+can now be reopened only if a fresh Node-serialized capture exposes a
+new regression; otherwise Phase 5 is effectively closed as well.
+
+---
+
+## 6.1 Session 2026-07-05 (continued) — Phase B.5: ForBusiness image layout bug
+
+**Triggered by.** User attached two screenshots after Phase 3 closure:
+the live fresha.com ForBusiness section (top, image centred behind the
+heading text) versus the Figma render (bottom, image off in a wrong
+position). The image was being fetched correctly but rendered at the
+wrong coordinates.
+
+**Root cause (capture-side, walker `serializeElement`).** The
+ForBusiness dashboard is a `<picture>` inside a `Section_self` whose
+CSS is:
+
+- live: `position: absolute; left: 936px; top: -97.0781px;`
+  `transform: matrix(1, 0, 0, 1, -1041, 0)`
+- walker: `x = -105, y = -49` (post-transform `getBoundingClientRect`)
+- walker: `style.transform = "none"` (stripped by
+  `stripMatrixTranslation` because the matrix was pure translation)
+- walker: `style.left = "936px"` (kept, because Tailwind-cascaded
+  `left`/`top` are visible in `getComputedStyle`)
+
+Plugin's `positionOffset` reads `style.left = 936px` and adds it on
+top of the post-transform bbox.x = -105 → Figma renders at **831**
+instead of **-105**. The `-1041px` translation is double-counted: the
+bbox already encodes it (post-transform), and `style.left` was never
+zeroed out.
+
+**Fix (walker-side, surgical).** `extension/src/capture-core.ts`
+around `serializeElement` (the body-creation block). For elements
+whose raw transform is a pure translation `matrix(1,0,0,1,e,f)`:
+
+1. Subtract `e` and `f` from `x`/`y` (so bbox becomes the
+   **un-translated** position).
+2. Override `style.transform = matrix(1, 0, 0, 1, e, f)` so the
+   translation is preserved verbatim.
+3. Zero `style.top`/`left`/`right`/`bottom`/`inset` and all logical
+   longhands (`insetBlockStart`, `insetInlineStart`, etc.) to
+   `'auto'` so `positionOffset` returns `{dx: 0, dy: 0}`.
+
+Now plugin's existing `applyTransform(matrix(1,0,0,1,e,f))` applies
+the translation exactly once, producing the correct final visible
+position from the un-translated bbox.
+
+**Affected scope (fresha capture).** 12 of 899 nodes. 8 are
+pure-translation (the bug class this fix addresses — 1 ForBusiness
+image at node-587 + 7 carousel buttons centred with
+`translate(0, -50%)`-style transforms). 4 are non-pure matrix
+combinations on `AnimatedSpotlight` (rotation + scale + translation
+together) — out of scope here; they need a follow-up that parses
+`matrix3d` and shorthand `translate()`/`rotate()`/`scale()` chains.
+
+**Verification (offline fixture).** `test/fixture/fresha-fb-image.html`
+— a minimal page that replicates the live CSS verbatim
+(`left: 936px; top: -97.0781px; transform: matrix(1,0,0,1,-1041,0)` on
+a `.wrap` div inside a 1440×728 `overflow:hidden` parent). Ran the
+fixed walker via `node run-capture.mjs --file=fixture/fresha-fb-image.html
+--name=fresha-fb --viewport=1500x800 --update-snapshot`. Captured
+3 nodes; `node-2` (the wrap div) came back as
+`x=937, y=-96, transform=matrix(1,0,0,1,-1041,0),
+top="auto", left="auto"`. Then `node visual-diff.mjs` →
+`preview.html` contains
+`<div style="position:absolute;left:937px;top:-96px;transform:matrix(1,0,0,1,-1041,0)">`,
+which the browser renders with `getBoundingClientRect.x = -104`
+(canvas-relative). Live: `-105`. **Match within 1-2 px rounding.**
+
+**Verification (test fixture regression).** `test/fixture/transform-fix-test.html`
+captured cleanly: 4 top-level nodes, all with correct un-translated
+bbox + preserved transform + auto insets. The fixture's Case A
+(`translate(0, 50px) + left: 50, top: 30`) gives
+`bbox=(51, 31), transform=matrix(1,0,0,1,0,50), top/left=auto`. Plugin
+math: `applyTransform` adds (0, 50) → final (51, 81) which matches
+the live post-transform bbox (51, 81).
+
+**Why the existing `find-doublecount.mjs` returns 0 mismatches on
+the snapshot.** The snapshot's `test/capture.json` (4.27 MB, dated
+2026-07-04 10:53) was last serialised via PowerShell `ConvertTo-Json
+-Depth 12`, which **strips identity-default values** (`"top": "auto"`,
+`"left": "auto"`) during hashtable → JSON round-trip. The walker
+itself captures `style.top`/`left` as `"auto"` for the ForBusiness
+image; only the PowerShell tool drops those empty string fields. The
+fix targets the live walker output, not the corrupted snapshot.
+
+**Caveats.**
+- AnimatedSpotlight nodes still mis-render (non-pure matrices).
+  Filed as a follow-up.
+- The fix only fires for the matrix(a,b,c,d,e,f) form with
+  a=b=c=d=0 or 1 (i.e. pure translation). Shorthand
+  `translate(Xpx, Ypx)` is already normalised to matrix by the
+  browser's computed-style getter, so it's covered. `matrix3d()`
+  and chained transforms are not.
+
+**Files touched.**
+- `extension/src/capture-core.ts` — `serializeElement` now does the
+  pure-translation detection + bbox un-translation + style override
+  before constructing `node: CaptureNode`.
+- `test/fixture/fresha-fb-image.html` — new offline fixture that
+  replicates the live ForBusiness CSS (900 bytes).
+- `test/snapshot/fresha-fb.json` — captured from the fixture for
+  regression diffing (3 nodes, 259 bytes).
+- `test/tmp/verify-fb-fix.mjs` — Playwright script that loads
+  `preview.html` and confirms the image renders at the correct
+  position.
+- `test/tmp/fb-after-fix.png` — screenshot of the rendered preview.
 
 ---
 

@@ -176,6 +176,18 @@ if (rasterTargets.length) {
   payload.images = payload.images || {};
   for (const t of rasterTargets) {
     try {
+      // Force crossfade members visible + on top for the shot (the app <video>
+      // alternates opacity with its sibling <picture>; the inactive one would
+      // screenshot blank or capture the sibling's pixels instead).
+      await page.evaluate((id) => {
+        const el = document.querySelector(`[data-h2f-rid="${id}"]`);
+        let a = el;
+        while (a && a !== document.body) {
+          if (parseFloat(getComputedStyle(a).opacity) < 1) a.style.setProperty('opacity', '1', 'important');
+          a = a.parentElement;
+        }
+        if (el) el.style.setProperty('z-index', '2147483647', 'important');
+      }, t.id);
       const buf = await page.locator(`[data-h2f-rid="${t.id}"]`).first()
         .screenshot({ timeout: 5000, animations: 'disabled' });
       payload.images[t.id] = `data:image/png;base64,${buf.toString('base64')}`;

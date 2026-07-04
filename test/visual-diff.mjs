@@ -241,8 +241,17 @@ function renderNode(n, inheritedGradient) {
   // transparent areas must NOT reveal the element's CSS background behind them.
   if (n.rasterize) {
     const s = n.style || {};
-    const radius = (s.borderRadius && s.borderRadius !== '0px') ? `;border-radius:${s.borderRadius}` : '';
-    const minStyle = `position:absolute;left:${n.x}px;top:${n.y}px;width:${n.width}px;height:${n.height}px${radius}`;
+    // Rasterized elements (video, clip-path, mask, ...) can still carry a
+    // visible CSS border that the screenshot does NOT bake in. Apply it so
+    // the rendered preview matches the source — mirrors the plugin.ts fix.
+    const radius = (s.borderRadius && s.borderRadius !== '0px') ? `border-radius:${s.borderRadius};` : '';
+    const border = (s.borderStyle && s.borderStyle !== 'none' && parseFloat(s.borderWidth) > 0)
+      ? `border:${s.borderWidth} ${s.borderStyle} ${s.borderColor};`
+      : '';
+    const outline = (s.outlineStyle && s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0)
+      ? `outline:${s.outlineWidth} ${s.outlineStyle} ${s.outlineColor};`
+      : '';
+    const minStyle = `position:absolute;left:${n.x}px;top:${n.y}px;width:${n.width}px;height:${n.height}px;${radius}${border}${outline}`;
     const src = n.rasterId && images[n.rasterId];
     if (src) return `<img src="${src}" style="${minStyle}" alt="${esc(n.name)}" data-name="${esc(n.name)} (raster)" title="${esc(n.name)} — ${esc(n.rasterReason || 'raster')}" />`;
     return `<div style="${minStyle};background:repeating-linear-gradient(45deg,#fdd,#fdd 8px,#fbb 8px,#fbb 16px);display:flex;align-items:center;justify-content:center;color:#900;font:11px/1 sans-serif" title="${esc(n.rasterReason||'')}">raster?</div>`;

@@ -1,0 +1,34 @@
+﻿[
+  {
+    "tag": "PICTURE",
+    "dataName": "",
+    "rect": {
+      "x": -105,
+      "y": 3958.90625,
+      "w": 2082,
+      "h": 776.078125
+    },
+    "pos": "absolute",
+    "left": "936px",
+    "top": "-97.0781px",
+    "right": "-1578px",
+    "bottom": "0px",
+    "transform": "matrix(1, 0, 0, 1, -1041, 0)",
+    "aspectRatio": "1285 / 479",
+    "inlineSize": "2082px",
+    "blockSize": "776.078px",
+    "parent": {
+      "tag": "DIV",
+      "dataName": "",
+      "rect": {
+        "x": 0,
+        "y": 4007.984375,
+        "w": 1440,
+        "h": 728
+      },
+      "pos": "relative",
+      "overflow": "hidden",
+      "transform": "none"
+    }
+  }
+]

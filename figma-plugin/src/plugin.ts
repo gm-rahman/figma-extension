@@ -345,6 +345,84 @@ function applyCornerRadii(frame: CornerNode, style: ElementStyle): void {
   frame.bottomLeftRadius  = bl;
 }
 
+// ── Border / outline stroke helper ─────────────────────────────────────────
+//
+// Applies CSS borders + outline to ANY node that supports strokes (FrameNode,
+// RectangleNode — both expose `strokes`/`strokeWeight`/`strokeTopWeight`/...).
+// Previously only the frame branch applied borders; rasterized elements (the
+// <video> in DownloadApp etc.) were missing their 2px black rings even though
+// capture.json had them.
+//
+// CSS allows per-side border-width / -colour / -style; Figma has only one
+// uniform stroke. We collapse to uniform when all four sides agree, and
+// when they differ we fall back to per-side weights + colours via Figma's
+// `strokeTopWeight`/`Color` API (supported on FrameNode + RectangleNode as of
+// 2024+). CSS outline (focus rings) → OUTSIDE stroke, only when no border
+// stroke exists (Figma has one stroke set).
+type StrokeNode = Pick<RectangleNode,
+  | 'strokes' | 'strokeWeight' | 'strokeAlign'
+  | 'strokeTopWeight' | 'strokeBottomWeight' | 'strokeLeftWeight' | 'strokeRightWeight'>;
+function applyBorderStroke(node: StrokeNode, style: ElementStyle): void {
+  const sideStyle = (s?: string) => (s && s !== 'none' ? s : null);
+  const sideWidth = (s?: string) => parsePx(s || '0px');
+  const topS = sideStyle(style.borderTopStyle),    rightS = sideStyle(style.borderRightStyle);
+  const botS = sideStyle(style.borderBottomStyle), leftS = sideStyle(style.borderLeftStyle);
+  const topW = sideWidth(style.borderTopWidth),    rightW = sideWidth(style.borderRightWidth);
+  const botW = sideWidth(style.borderBottomWidth), leftW = sideWidth(style.borderLeftWidth);
+  const sides = [
+    ['top',    topS,    topW,    style.borderTopColor],
+    ['right',  rightS,  rightW,  style.borderRightColor],
+    ['bottom', botS,    botW,    style.borderBottomColor],
+    ['left',   leftS,   leftW,   style.borderLeftColor],
+  ] as const;
+  const anySideBorder = sides.some(([, s, w]) => s && w > 0);
+  if (anySideBorder) {
+    // Uniform check: same style + same width + same colour on all four sides.
+    const allSame = sides.every(([, s, w, c]) =>
+      s === topS && w === topW && c === sides[0][3]
+    );
+    if (allSame && topS && topW > 0) {
+      const bc = parseCssColor(sides[0][3] || style.borderColor);
+      if (bc) {
+        node.strokes      = [{ type: 'SOLID', color: bc.color, opacity: bc.opacity }];
+        node.strokeWeight = topW;
+        node.strokeAlign  = 'INSIDE';
+        return;
+      }
+    }
+    // Non-uniform: per-side weights + colours via Figma API. Per-side colours
+    // (strokeTopColor etc.) exist on FrameNode but not RectangleNode; we cast
+    // through `any` so the same helper serves both, mirroring the original
+    // pattern from the frame branch.
+    for (const [side, s, w, c] of sides) {
+      if (!s || w <= 0) continue;
+      const col = parseCssColor(c || style.borderColor);
+      if (!col) continue;
+      const paint: SolidPaint = { type: 'SOLID', color: col.color, opacity: col.opacity };
+      try {
+        if      (side === 'top')    { node.strokeTopWeight = w;    (node as any).strokeTopColor = paint; }
+        else if (side === 'right')  { node.strokeRightWeight = w;  (node as any).strokeRightColor = paint; }
+        else if (side === 'bottom') { node.strokeBottomWeight = w; (node as any).strokeBottomColor = paint; }
+        else if (side === 'left')   { node.strokeLeftWeight = w;   (node as any).strokeLeftColor = paint; }
+      } catch { /* older runtime: fall through */ }
+    }
+    // CSS borders default to INSIDE; emulate by setting the overall align.
+    node.strokeAlign = 'INSIDE';
+    return;
+  }
+  // CSS outline (rings, focus outlines) → OUTSIDE stroke; only when no
+  // border stroke exists (Figma has one stroke set) and colour is opaque.
+  if (style.outlineStyle && style.outlineStyle !== 'none') {
+    const oc = parseCssColor(style.outlineColor);
+    const ow = parsePx(style.outlineWidth);
+    if (oc && ow > 0) {
+      node.strokes      = [{ type: 'SOLID', color: oc.color, opacity: oc.opacity }];
+      node.strokeWeight = ow;
+      node.strokeAlign  = 'OUTSIDE';
+    }
+  }
+}
+
 const CLIP_VALUES = new Set(['hidden', 'scroll', 'auto', 'clip']);
 function shouldClip(n: CaptureNode) {
   return CLIP_VALUES.has(n.style.overflowX) || CLIP_VALUES.has(n.style.overflowY);
@@ -707,6 +785,10 @@ async function buildNode(
     rect.name = `raster: ${capture.name}`;
     rect.opacity = opacity;
     applyCornerRadii(rect, capture.style);
+    // CSS border / outline — rasterized elements (video, clip-path, mask, ...)
+    // can carry visible rings that the screenshot does NOT bake in. Apply them
+    // as Figma strokes so the rendered frame matches the source.
+    applyBorderStroke(rect, capture.style);
     try {
       const img = figma.createImage(imageBytes[capture.rasterId]);
       rect.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: 'FILL' }];
@@ -774,84 +856,9 @@ async function buildNode(
         frame.fills = resolveFills(capture.style, false);
       }
 
-      // Stroke — borders + outlines.
-      // CSS allows per-side border-width / -colour / -style; Figma has only one
-      // uniform stroke. We collapse to uniform when all four sides agree, and
-      // when they differ we fall back to the T/B/L/R values directly via
-      // strokeTopWeight/LeftWeight/etc. (Figma supports per-side weight + colour
-      // for FrameNode as of 2024+).
-      let hasStroke = false;
-      const st = capture.style;
-      const sideStyle = (s?: string) => (s && s !== 'none' ? s : null);
-      const sideWidth = (s?: string) => parsePx(s || '0px');
-      const topS = sideStyle(st.borderTopStyle),    rightS = sideStyle(st.borderRightStyle);
-      const botS = sideStyle(st.borderBottomStyle), leftS = sideStyle(st.borderLeftStyle);
-      const topW = sideWidth(st.borderTopWidth),    rightW = sideWidth(st.borderRightWidth);
-      const botW = sideWidth(st.borderBottomWidth), leftW = sideWidth(st.borderLeftWidth);
-      const sides = [
-        ['top', topS, topW, st.borderTopColor],
-        ['right', rightS, rightW, st.borderRightColor],
-        ['bottom', botS, botW, st.borderBottomColor],
-        ['left', leftS, leftW, st.borderLeftColor],
-      ] as const;
-      const anySideBorder = sides.some(([, s, w]) => s && w > 0);
-      if (anySideBorder) {
-        // Uniform check: same style + same width + same colour on all four sides.
-        const allSame = sides.every(([, s, w, c]) =>
-          s === topS && w === topW && c === sides[0][3]
-        );
-        if (allSame && topS && topW > 0) {
-          const bc = parseCssColor(sides[0][3] || st.borderColor);
-          if (bc) {
-            frame.strokes      = [{ type: 'SOLID', color: bc.color, opacity: bc.opacity }];
-            frame.strokeWeight = topW;
-            frame.strokeAlign  = 'INSIDE';
-            hasStroke = true;
-          }
-        } else {
-          // Non-uniform: per-side weights + colours via Figma FrameNode API.
-          // strokeTopWeight / strokeBottomWeight etc. accept numeric weights.
-          // strokeTopColor / strokeRightColor etc. accept SolidPaint values.
-          let primaryColour: SolidPaint | null = null;
-          for (const [side, s, w, c] of sides) {
-            if (!s || w <= 0) continue;
-            const col = parseCssColor(c || st.borderColor);
-            if (!col) continue;
-            const paint: SolidPaint = { type: 'SOLID', color: col.color, opacity: col.opacity };
-            try {
-              if (side === 'top') {
-                (frame as any).strokeTopWeight    = w;
-                (frame as any).strokeTopColor     = paint;
-              } else if (side === 'right') {
-                (frame as any).strokeRightWeight  = w;
-                (frame as any).strokeRightColor   = paint;
-              } else if (side === 'bottom') {
-                (frame as any).strokeBottomWeight = w;
-                (frame as any).strokeBottomColor  = paint;
-              } else if (side === 'left') {
-                (frame as any).strokeLeftWeight   = w;
-                (frame as any).strokeLeftColor    = paint;
-              }
-              if (!primaryColour) primaryColour = paint;
-            } catch { /* older runtime: fall through */ }
-          }
-          // Per-side strokes can render with mixed aligns; CSS defaults to
-          // INSIDE for borders — emulate that by setting the overall align.
-          frame.strokeAlign = 'INSIDE';
-          hasStroke = true;
-        }
-      }
-      // CSS outline (rings, focus outlines) → OUTSIDE stroke; skipped when a
-      // border stroke exists (Figma has one stroke set) or colour is transparent.
-      if (!hasStroke && capture.style.outlineStyle && capture.style.outlineStyle !== 'none') {
-        const oc = parseCssColor(capture.style.outlineColor);
-        const ow = parsePx(capture.style.outlineWidth);
-        if (oc && ow > 0) {
-          frame.strokes      = [{ type: 'SOLID', color: oc.color, opacity: oc.opacity }];
-          frame.strokeWeight = ow;
-          frame.strokeAlign  = 'OUTSIDE';
-        }
-      }
+      // Stroke — borders + outlines (CSS).
+      // Centralised helper so the raster branch can apply the same logic.
+      applyBorderStroke(frame, capture.style);
 
       // Effects: every shadow + backdrop blur + element filter (all additive).
       const effects: Effect[] = [...parseShadows(capture.style.boxShadow)];

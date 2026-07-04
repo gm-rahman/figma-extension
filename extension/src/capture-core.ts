@@ -1334,19 +1334,63 @@ function serializeElement(
   const type = classifyElement(el);
   const id   = `node-${++nodeCounter}`;
 
+  // Detect a pure-translation transform BEFORE getStyle strips it. The bbox
+  // already includes the translation (getBoundingClientRect is post-transform)
+  // but getStyleFromComputed calls stripMatrixTranslation, which collapses
+  // identity-(a,b,c,d) matrices to 'none'. Without correction, the Figma
+  // plugin would read x/y (post-transform) and add style.top/left (the
+  // un-transformed CSS inset), double-counting the offset. Example:
+  //   live:  transform: matrix(1,0,0,1,-1041,0); left: 936px;
+  //   bbox:  x=-105  (← 936 + (-1041))
+  //   wrong: x = bbox.x + style.left = -105 + 936 = 831   (off by -1041)
+  //   right: x = 936, apply matrix translation → final -105
+  // See Phase B.5 / ForBusiness dashboard image fix in PROJECT_LOG.md.
+  let pureTranslateX = 0, pureTranslateY = 0;
+  const rawTransform = s.transform || 'none';
+  if (rawTransform !== 'none') {
+    const tm = rawTransform.match(/^matrix\(\s*([^)]+)\)$/);
+    if (tm) {
+      const tp = tm[1].split(',').map(v => parseFloat(v.trim()));
+      if (tp.length >= 6
+          && tp[0] === 1 && tp[1] === 0 && tp[2] === 0 && tp[3] === 1
+          && Number.isFinite(tp[4]) && Number.isFinite(tp[5])) {
+        pureTranslateX = tp[4];
+        pureTranslateY = tp[5];
+      }
+    }
+  }
+
   const node: CaptureNode = {
     id,
     tagName: el.tagName.toLowerCase(),
     type,
     name: getNodeName(el),
-    x: Math.round(docX - parentDocX),
-    y: Math.round(docY - parentDocY),
+    x: Math.round(docX - parentDocX - pureTranslateX),
+    y: Math.round(docY - parentDocY - pureTranslateY),
     width:  Math.round(rect.width),
     height: Math.round(rect.height),
     style:  getStyle(el),
     children: [],
   };
   if (forcedVisible) node.style.opacity = '1';
+
+  // If we detected a pure translation, restore the full matrix on
+  // style.transform (getStyle collapsed it to 'none') and clear the CSS
+  // insets so the plugin's positionOffset becomes a no-op. The plugin's
+  // applyTransform will then re-apply the translation once, producing the
+  // correct final position from the un-translated x/y above.
+  if (pureTranslateX !== 0 || pureTranslateY !== 0) {
+    node.style.transform    = `matrix(1, 0, 0, 1, ${pureTranslateX}, ${pureTranslateY})`;
+    node.style.top          = 'auto';
+    node.style.left         = 'auto';
+    node.style.right        = 'auto';
+    node.style.bottom       = 'auto';
+    node.style.inset        = 'auto';
+    node.style.insetBlockStart   = 'auto';
+    node.style.insetBlockEnd     = 'auto';
+    node.style.insetInlineStart  = 'auto';
+    node.style.insetInlineEnd    = 'auto';
+  }
 
   // Colour-filter bake: apply any inherited colour transform to this node's
   // colours, and if THIS element adds a colour-only filter over an image-free

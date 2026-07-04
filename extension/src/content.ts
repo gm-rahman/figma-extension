@@ -215,6 +215,22 @@ async function rasterizeFlaggedElements(): Promise<Record<string, string>> {
     if (r.width <= 0 || r.height <= 0) continue;
     if (r.top < 0 || r.left < 0 || r.bottom > window.innerHeight || r.right > window.innerWidth) continue;
 
+    // Crossfade members (e.g. the app <video> alternating with a <picture>) can
+    // be at opacity 0 or UNDER their sibling at shot time → blank/wrong pixels.
+    // Force the target visible and on top for the shot, then restore.
+    const bumped: Array<{ e: HTMLElement; op: string; z: string }> = [];
+    let anc: HTMLElement | null = el;
+    while (anc && anc !== document.body) {
+      if (parseFloat(getComputedStyle(anc).opacity) < 1) {
+        bumped.push({ e: anc, op: anc.style.getPropertyValue('opacity'), z: anc.style.getPropertyValue('z-index') });
+        anc.style.setProperty('opacity', '1', 'important');
+      }
+      anc = anc.parentElement;
+    }
+    const prevZ = el.style.getPropertyValue('z-index');
+    el.style.setProperty('z-index', '2147483647', 'important');
+    await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 30)));
+
     try {
       const resp = await chrome.runtime.sendMessage({
         type: 'CAPTURE_ELEMENT',
@@ -223,6 +239,10 @@ async function rasterizeFlaggedElements(): Promise<Record<string, string>> {
       });
       if (resp?.ok && resp.dataUrl) images[t.id] = resp.dataUrl;
     } catch { /* skip this one */ }
+
+    // Restore exactly what we changed.
+    for (const b of bumped) { if (b.op) b.e.style.setProperty('opacity', b.op); else b.e.style.removeProperty('opacity'); if (!b.z) b.e.style.removeProperty('z-index'); }
+    if (prevZ) el.style.setProperty('z-index', prevZ); else el.style.removeProperty('z-index');
 
     // Respect Chrome's captureVisibleTab rate limit (~2/sec).
     await new Promise<void>(r => setTimeout(r, 550));
