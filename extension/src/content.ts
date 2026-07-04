@@ -174,7 +174,11 @@ async function prepareDomForCapture(): Promise<HTMLElement[]> {
   const revealed: HTMLElement[] = [];
   for (const el of Array.from(document.querySelectorAll<HTMLElement>('*'))) {
     const cs = getComputedStyle(el);
-    if (parseFloat(cs.opacity) === 0 && /opacity|all/.test(cs.transitionProperty)) {
+    // In-flow only: absolutely-positioned opacity-0 transition elements are
+    // hover/click popovers, tooltips and dropdowns (e.g. the "Scan to download"
+    // QR panel) — revealing them paints stray overlays over the layout.
+    const inFlow = cs.position !== 'absolute' && cs.position !== 'fixed';
+    if (inFlow && parseFloat(cs.opacity) === 0 && /opacity|all/.test(cs.transitionProperty)) {
       el.setAttribute('data-h2f-reveal', '');
       revealed.push(el);
     }

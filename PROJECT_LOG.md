@@ -872,6 +872,52 @@ Both render correctly in `preview.html`:
 correctly. User's screenshots likely from an older capture run (pre-video
 rasterization). No fix needed.
 
+### Session 2026-07-05 — Heart icon colour + QR hover-popover overlay
+User (data-first, no assumptions; confirmed heart-colour intent via question):
+- **Heart "missing" was a colour bug, not a capture/render miss.** The fav-button
+  heart IS captured + rendered. Its SVG root is `fill="currentColor"`; capture-core
+  resolved currentColor via the element's `color` (rgb 13,13,13 black) → black heart
+  on the dark glass button = invisible. Live probe proved the truth: root
+  `getComputedStyle(svg).fill` = black BUT `getComputedStyle(path).fill` = **white**
+  (a CSS rule paints the path, overriding the presentation attribute). Fix
+  (capture-core svg branch): bake EACH element's computed `fill`/`stroke` onto the
+  serialized clone (skip `none`/`url(#…)`), keeping the currentColor→color net as a
+  fallback. Verified: heart path now serialized `fill="rgb(255,255,255)"`.
+- **"Scan to download" QR overlay** = the `AppButton_qrCode` hover popover
+  (`position:absolute`, opacity 0 at rest) was being force-revealed and kept by the
+  crossfade-media rule, painting a stray expanded QR over the hero count. Fix:
+  restrict BOTH reveal loops (content.ts + run-capture.mjs) and the capture-core
+  crossfade-keep to IN-FLOW elements only (`position` not absolute/fixed). The app
+  phone is `position:static` → still kept; the QR popover (absolute) → dropped.
+  Verified: QR gone, phone present (300×650), fresha 901→856 nodes, PROBLEMS 0,
+  fixture 90 nodes clean, snapshots updated.
+
+### Session 2026-07-05 (cont.) — Heart clipping + spotlight glow + counter style
+Three follow-ups, each traced from data (heart colour was NOT the blocker):
+- **Heart still invisible = SVG clipping, not colour.** The heart markup renders
+  perfectly in the HTML preview, so the failure was Figma-specific:
+  `createNodeFromSvg` sized the frame to the `viewBox="0 0 32 32"`, then the
+  plugin's `resize(20,20)` CLIPPED the content to the top-left corner (icon
+  vanished). Fix (capture-core svg branch): bake explicit `width`/`height` =
+  rendered CSS box so the viewBox scales into the box. Also aligned the root
+  `<svg>` fill to the first shape's fill (defends against importers that flatten
+  using the root fill → would re-blacken the white heart).
+- **Hero "gradient" = a blurred-SVG spotlight, not a gradient.** Live probe: NO
+  CSS gradient anywhere in the hero; the lavender wash is `AnimatedSpotlight`
+  `<span>`s with `background:url(spotlight.svg)` — a `#FFD7FF` ellipse wrapped in
+  `<g filter="url(#a)">` feGaussianBlur(stdDeviation 100). createNodeFromSvg
+  can't render SVG `<filter>` → throws → transparent → invisible. Fix (plugin
+  `stripSvgBlur` + bg-svg branch): strip `filter="url(#…)"` so the ellipse
+  renders, convert stdDeviation→Figma LAYER_BLUR radius (scaled viewBox→width,
+  capped 100). Both spotlight spans are captured + embedded already.
+- **Counter style.** "appointments booked today" is an animated odometer →
+  capture flattens garbled digits at the WRAPPER's 16px. Per user ("just fix the
+  style, ignore digits"): both clipped-text and demote-to-text branches now adopt
+  the dominant descendant text style (max fontSize×len). Count now 22px/600
+  (was 16px/400). NOTE: spotlight fix is PLUGIN-side — rebuild figma-plugin too.
+- Verified: heart `width=20 height=20` + white; count 22px/600; fresha 856 nodes,
+  fixture 90, PROBLEMS 0, snapshots updated, plugin tsc clean.
+
 ### Session 2026-07-04 (cont.) — Carousel "P" glyph + sr-only leak + radius audit
 User: card border missing, arrow shows literal "P", card layout broken. Data-first:
 - **The "P" root cause (three hypotheses tested, third proved):** not an icon-font

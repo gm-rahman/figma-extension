@@ -82,6 +82,21 @@ function svgMarkupFromBytes(bytes: Uint8Array | undefined): string | null {
   return /<svg[\s>]/i.test(text) ? text : null;
 }
 
+// Figma's createNodeFromSvg cannot render SVG <filter> (feGaussianBlur) — it
+// throws, dropping the whole layer. Strip every `filter="url(#…)"` reference so
+// the underlying shapes render, and convert the feGaussianBlur stdDeviation into
+// a Figma LAYER_BLUR radius (scaled from the SVG viewBox to the target width).
+function stripSvgBlur(markup: string, targetW: number): { markup: string; blur: number } {
+  if (!/filter\s*=\s*"url\(/i.test(markup)) return { markup, blur: 0 };
+  const std   = markup.match(/feGaussianBlur[^>]*stdDeviation\s*=\s*"?([\d.]+)/i);
+  const vb     = markup.match(/viewBox\s*=\s*"[\d.]+ [\d.]+ ([\d.]+)/i);
+  const vbW    = vb ? parseFloat(vb[1]) : targetW;
+  const scale  = vbW > 0 ? targetW / vbW : 1;
+  const blur   = std ? parseFloat(std[1]) * scale : 0;
+  const clean  = markup.replace(/\s*filter\s*=\s*"url\([^)]*\)"/gi, '');
+  return { markup: clean, blur: Math.min(blur, 100) }; // Figma caps blur radius at 100
+}
+
 // ── Color helpers ─────────────────────────────────────────────────────────
 
 interface ParsedColor { color: RGB; opacity: number; }
@@ -832,9 +847,15 @@ async function buildNode(
         // can't decode SVG). Inserted as the first child so it paints underneath.
         frame.fills = [];
         try {
-          const svgBg = figma.createNodeFromSvg(bgSvg);
+          // SVG <filter> (feGaussianBlur) is unsupported by createNodeFromSvg and
+          // makes it throw → the whole layer vanishes (Fresha's soft lavender
+          // "AnimatedSpotlight" glow). Strip the filter so the solid shape renders,
+          // then reapply the blur as a native Figma LAYER_BLUR.
+          const { markup: cleanSvg, blur } = stripSvgBlur(bgSvg, w);
+          const svgBg = figma.createNodeFromSvg(cleanSvg);
           svgBg.name = 'bg-svg';
           svgBg.resize(w, h);
+          if (blur > 0) svgBg.effects = [{ type: 'LAYER_BLUR', blurType: 'NORMAL', radius: blur, visible: true } as unknown as Effect];
           frame.insertChild(0, svgBg);
           svgBg.x = 0; svgBg.y = 0;
           try { (svgBg as any).layoutPositioning = 'ABSOLUTE'; } catch {}

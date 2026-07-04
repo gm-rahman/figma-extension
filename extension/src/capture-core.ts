@@ -1305,8 +1305,12 @@ function serializeElement(
     // carries MEDIA (Fresha's app-phone <picture> alternates with its <video> in
     // a loop — whichever is "off" sits at 0 at serialize time and was dropped).
     // Capture those visible. Text-only opacity-0 elements (tooltips, menus) stay
-    // dropped — media-bearing is the discriminator.
-    const revealPending = /opacity|all/.test(s.transitionProperty) &&
+    // dropped — media-bearing is the discriminator. Crucially, only IN-FLOW
+    // (static/relative) media qualifies: an absolutely-positioned opacity-0
+    // media element is a hover/click popover (Fresha's "Scan to download" QR
+    // panel), NOT a crossfade member — keeping it renders a stray overlay.
+    const inFlow = s.position !== 'absolute' && s.position !== 'fixed';
+    const revealPending = inFlow && /opacity|all/.test(s.transitionProperty) &&
       (/^(img|picture|video)$/.test(el.tagName.toLowerCase()) || !!el.querySelector('img,picture,video'));
     if (!revealPending) return null;
     forcedVisible = true;
@@ -1442,6 +1446,24 @@ function serializeElement(
       // Clipped subtree (odometer/marquee/line-clamp): measure only visible text.
       const m = measureClipped(el);
       node.text = m.text; node.lines = m.lines; node.textWidth = m.textWidth;
+      // Adopt the dominant descendant text style so an animated counter (Fresha's
+      // "appointments booked today", whose rolling digit spans are larger/bolder
+      // than the clipping wrapper) renders at the real visible size, not the
+      // wrapper's inherited font-size.
+      let best: CSSStyleDeclaration | null = null, bestScore = -1;
+      for (const d of Array.from(el.querySelectorAll('*'))) {
+        const dt = (d as HTMLElement).textContent?.trim() || '';
+        if (!dt) continue;
+        const ds = window.getComputedStyle(d);
+        const sc = (parseFloat(ds.fontSize) || 0) * Math.min(dt.length, 40);
+        if (sc > bestScore) { bestScore = sc; best = ds; }
+      }
+      if (best && best.fontSize !== node.style.fontSize) {
+        node.style.fontSize   = best.fontSize;
+        node.style.fontWeight = best.fontWeight;
+        node.style.lineHeight = best.lineHeight;
+        node.style.color      = best.color;
+      }
     } else {
       const m = measureText(el);
       // Multi-line → bake in the exact wrap points so Figma won't re-flow the text.
@@ -1503,9 +1525,43 @@ function serializeElement(
         if (!clone.getAttribute('viewBox') && rect.width > 0 && rect.height > 0) {
           clone.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
         }
-        // Resolve `currentColor` in stroke/fill to the element's actual color —
-        // Figma's SVG parser doesn't know what `currentColor` means.
+        // Bake explicit width/height matching the rendered CSS box. Without these
+        // Figma's createNodeFromSvg sizes the frame to the viewBox (e.g. 32×32),
+        // then the plugin's resize(20,20) CLIPS the content to the top-left corner
+        // instead of scaling it — the icon (Fresha's heart) vanishes. With w/h set,
+        // the viewBox scales into the box and the whole icon renders.
+        if (rect.width > 0 && rect.height > 0) {
+          clone.setAttribute('width',  String(Math.round(rect.width)));
+          clone.setAttribute('height', String(Math.round(rect.height)));
+        }
+        // Bake each element's COMPUTED fill/stroke so the exact rendered paint
+        // survives. This resolves BOTH `currentColor` AND CSS `fill:`/`stroke:`
+        // rules that override the SVG presentation attribute — e.g. Fresha's
+        // heart whose root `fill="currentColor"` computes to black, but a CSS
+        // rule paints the path white (getComputedStyle(path).fill = white).
+        // Reading `color` alone (as before) baked the wrong colour → invisible.
+        const origEls  = [el, ...Array.from(el.querySelectorAll('*'))];
+        const cloneEls = [clone, ...Array.from(clone.querySelectorAll('*'))];
+        for (let i = 0; i < origEls.length && i < cloneEls.length; i++) {
+          let ocs: CSSStyleDeclaration;
+          try { ocs = window.getComputedStyle(origEls[i]); } catch { continue; }
+          const cf = ocs.fill, cst = ocs.stroke;
+          // Skip paint servers (url(#grad)/none) — only bake concrete colours.
+          if (cf  && cf  !== 'none' && !cf.startsWith('url('))  cloneEls[i].setAttribute('fill', cf);
+          if (cst && cst !== 'none' && !cst.startsWith('url(')) cloneEls[i].setAttribute('stroke', cst);
+        }
+        // Align the root <svg> fill with the first painting shape's fill. The svg
+        // root has no geometry of its own, but some SVG importers flatten the
+        // vector network using the ROOT fill — which would repaint a light icon
+        // (Fresha's white heart) with the root's dark `currentColor`. Every shape
+        // already carries its own explicit fill above, so this is harmless for
+        // multi-colour icons and prevents the flatten-to-black failure.
+        const firstShape = clone.querySelector('path, circle, rect, polygon, ellipse, line, polyline') as SVGElement | null;
+        const shapeFill = firstShape?.getAttribute('fill');
+        if (shapeFill && shapeFill !== 'none' && !shapeFill.startsWith('url('))
+          clone.setAttribute('fill', shapeFill);
         let markup = new XMLSerializer().serializeToString(clone);
+        // Safety net: any remaining currentColor → the root element's colour.
         if (markup.includes('currentColor')) {
           const color = window.getComputedStyle(el).color || '#000';
           markup = markup.split('currentColor').join(color);
@@ -1550,6 +1606,24 @@ function serializeElement(
         const txt = (el as HTMLElement).innerText?.trim().slice(0, 1000) ?? '';
         if (txt) {
           node.type = 'text';
+          // Adopt the dominant descendant text style. A demoted container whose
+          // children were dropped (Fresha's animated counter — rolling digit
+          // spans clipped away) otherwise renders at the WRAPPER's inherited
+          // font-size (16px) instead of the visible text's real size (22px).
+          let best: CSSStyleDeclaration | null = null, bestScore = -1;
+          for (const d of Array.from(el.querySelectorAll('*'))) {
+            const dt = (d as HTMLElement).textContent?.trim() || '';
+            if (!dt) continue;
+            const ds = window.getComputedStyle(d);
+            const score = (parseFloat(ds.fontSize) || 0) * Math.min(dt.length, 40);
+            if (score > bestScore) { bestScore = score; best = ds; }
+          }
+          if (best && best.fontSize !== node.style.fontSize) {
+            node.style.fontSize   = best.fontSize;
+            node.style.fontWeight = best.fontWeight;
+            node.style.lineHeight = best.lineHeight;
+            node.style.color      = best.color;
+          }
           if (hasClippedOverflow(el)) {
             const m = measureClipped(el);
             node.text = m.text; node.lines = m.lines; node.textWidth = m.textWidth;
