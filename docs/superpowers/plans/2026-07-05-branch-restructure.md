@@ -10,6 +10,23 @@
 
 **Tech Stack:** git, GitHub (`gh` CLI), Node 24 LTS + npm (`npm ci`), bash.
 
+## Status — ✅ COMPLETE (verified 2026-07-05)
+
+All nine tasks are done.
+
+- **Tasks 1–4** (`development`-side edits) — committed on `development`: `.claude` settings
+  (`a663201`), Phase 0 spec fix (`33b9781`), README (`269969f`), sync script (`678f260`).
+- **Tasks 5–8** (push `development`, reshape + push `main`, set default branch) — found
+  **already satisfied on `origin` from an earlier session**, so they were **re-verified
+  against the remote, not re-executed**. The STOP/approval-gate steps were therefore moot
+  (nothing new was pushed). Verified: `origin/development` @ `678f260`; `origin/main` @
+  `8009c39` with a core-only tree (`.gitignore`, `LICENSE`, `README.md`, `backend`,
+  `extension`, `figma-plugin`; no `test-stops.cjs`); GitHub default branch = `main`
+  (via `git ls-remote --symref origin HEAD` — `gh` was unauthenticated but not required).
+- **Task 9** — executed here: a throwaway worktree of `main` built all three packages
+  cleanly (`backend` tsc → `dist/`, `extension` Vite → `dist/`, `figma-plugin` esbuild →
+  `dist/`), proving no essential file was mis-excluded. `main` is runnable-core-complete.
+
 ## Global Constraints
 
 - **Remote:** `git@github.com:gm-rahman/figma-extension.git` (`origin`). Do not add remotes.
@@ -19,7 +36,7 @@
 - **Node:** 24 LTS (used in the corrected Phase 0 spec and the README).
 - **Core set (must remain on `main`), verbatim:** `backend/` (all) · `extension/` (all) · `figma-plugin/` (all **except `test-stops.cjs`**) · `README.md` · `LICENSE` · `.gitignore`.
 - **Excluded from `main` (development-only), verbatim:** `test/` · `graphify-out/` · `.puku/` · `plans/` · `fix/` · `docs/` · `.agents/` · `.claude/` · `capture.json` · `PROJECT_LOG.md` · `RASTERIZATION_PLAN.md` · `figma-plugin/test-stops.cjs`.
-- **Start state:** current branch `development` = `f5fc12d`; `main` = `7b72879` tracking `origin/main`; nothing pushed to `origin` yet.
+- **Start state (as planned):** current branch `development` = `f5fc12d`; `main` = `7b72879` tracking `origin/main`; nothing pushed to `origin` yet. _(Note: by the time execution resumed, `development` and the reshaped `main` had already been pushed — see Status above.)_
 
 ---
 
@@ -30,12 +47,12 @@ There is a pending edit to `.claude/settings.json` (present since the session st
 **Files:**
 - Modify/commit: `.claude/settings.json`
 
-- [ ] **Step 1: Inspect the pending change**
+- [x] **Step 1: Inspect the pending change**
 
 Run: `git status --short && git diff -- .claude/settings.json`
 Expected: shows `.claude/settings.json` as modified (` M .claude/settings.json`).
 
-- [ ] **Step 2: Decide and stage**
+- [x] **Step 2: Decide and stage**
 
 If the change is wanted (default), commit it to `development`:
 
@@ -46,7 +63,7 @@ git commit -m "chore: commit local .claude settings (development-only)"
 
 If the change is unwanted, discard instead: `git checkout -- .claude/settings.json`
 
-- [ ] **Step 3: Verify clean tree**
+- [x] **Step 3: Verify clean tree**
 
 Run: `git status --short`
 Expected: empty output (no modifications).
@@ -60,7 +77,7 @@ The Phase 0 spec was written before we discovered committed lockfiles. Fix the t
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-05-phase0-typecheck-gate-design.md`
 
-- [ ] **Step 1: Fix the "no lockfiles" fact**
+- [x] **Step 1: Fix the "no lockfiles" fact**
 
 Replace:
 ```
@@ -71,7 +88,7 @@ with:
 - **Committed lockfiles exist** in all three packages (`package-lock.json`) — CI uses `npm ci`.
 ```
 
-- [ ] **Step 2: Fix the CI Node version**
+- [x] **Step 2: Fix the CI Node version**
 
 Replace:
 ```
@@ -82,7 +99,7 @@ with:
 - **Node:** 24 LTS via `actions/setup-node`.
 ```
 
-- [ ] **Step 3: Fix the matrix install command**
+- [x] **Step 3: Fix the matrix install command**
 
 Replace the matrix step line:
 ```
@@ -93,7 +110,7 @@ with:
   2. `npm ci`
 ```
 
-- [ ] **Step 4: Fix the Lockfiles bullet**
+- [x] **Step 4: Fix the Lockfiles bullet**
 
 Replace:
 ```
@@ -107,12 +124,12 @@ with:
   committing its lockfile.
 ```
 
-- [ ] **Step 5: Verify no stale references remain**
+- [x] **Step 5: Verify no stale references remain**
 
 Run: `grep -nE "npm install|20 LTS|no committed lockfiles" docs/superpowers/specs/2026-07-05-phase0-typecheck-gate-design.md`
 Expected: no output (exit code 1).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-07-05-phase0-typecheck-gate-design.md
@@ -128,7 +145,7 @@ Replace the stub `# figma-extension` with a runnable README. It becomes `main`'s
 **Files:**
 - Modify: `README.md`
 
-- [ ] **Step 1: Write the README**
+- [x] **Step 1: Write the README**
 
 Write `README.md` with exactly this content:
 
@@ -200,12 +217,12 @@ test harness, design docs, and tooling. `main` is the runnable-core showcase. To
 MIT — see [LICENSE](LICENSE).
 ```
 
-- [ ] **Step 2: Verify it is no longer the stub**
+- [x] **Step 2: Verify it is no longer the stub**
 
 Run: `head -1 README.md`
 Expected: `# HTML → Figma`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md
@@ -219,7 +236,7 @@ git commit -m "docs: real README with build/run instructions for all three packa
 **Files:**
 - Create: `scripts/sync-main-from-dev.sh`
 
-- [ ] **Step 1: Create the script**
+- [x] **Step 1: Create the script**
 
 Write `scripts/sync-main-from-dev.sh` with exactly this content:
 
@@ -242,7 +259,7 @@ else
 fi
 ```
 
-- [ ] **Step 2: Make it executable and syntax-check it**
+- [x] **Step 2: Make it executable and syntax-check it**
 
 ```bash
 chmod +x scripts/sync-main-from-dev.sh
@@ -250,7 +267,7 @@ bash -n scripts/sync-main-from-dev.sh
 ```
 Expected: no output from `bash -n` (valid syntax). Do **not** run the script yet — Task 6 does the first reshape manually.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add scripts/sync-main-from-dev.sh
@@ -263,22 +280,22 @@ git commit -m "chore: add sync-main-from-dev script"
 
 **Files:** none (remote ref only)
 
-- [ ] **Step 1: STOP — request explicit user approval**
+- [x] **Step 1: STOP — request explicit user approval**
 
 This publishes the `development` branch to GitHub. Do not proceed until the user explicitly says to push.
 
-- [ ] **Step 2: Confirm what will be pushed**
+- [x] **Step 2: Confirm what will be pushed**
 
 Run: `git log --oneline origin/main..development`
 Expected: the four/five `development` commits (phase0 spec, branch-restructure spec, .claude settings, phase0 correction, README, sync script) — none unexpected.
 
-- [ ] **Step 3: Push**
+- [x] **Step 3: Push**
 
 ```bash
 git push -u origin development
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `git branch -vv`
 Expected: `development` shows `[origin/development]` tracking.
@@ -290,7 +307,7 @@ Expected: `development` shows `[origin/development]` tracking.
 **Files:**
 - Modify (branch tree): remove all excluded paths; pull real `README.md` from `development`.
 
-- [ ] **Step 1: Switch to main and confirm base**
+- [x] **Step 1: Switch to main and confirm base**
 
 ```bash
 git checkout main
@@ -298,7 +315,7 @@ git rev-parse HEAD
 ```
 Expected: `7b72879...` (matches `origin/main`).
 
-- [ ] **Step 2: Remove non-core paths**
+- [x] **Step 2: Remove non-core paths**
 
 ```bash
 git rm -r test graphify-out .puku plans fix .agents .claude \
@@ -306,13 +323,13 @@ git rm -r test graphify-out .puku plans fix .agents .claude \
 ```
 Expected: git lists each removed path. (`docs/` and `scripts/` do not exist on `main`, so they are not listed — correct.)
 
-- [ ] **Step 3: Bring the real README onto main**
+- [x] **Step 3: Bring the real README onto main**
 
 ```bash
 git checkout development -- README.md
 ```
 
-- [ ] **Step 4: Verify the tree is core-only**
+- [x] **Step 4: Verify the tree is core-only**
 
 List the top-level entries that remain and confirm no excluded paths:
 ```bash
@@ -323,7 +340,7 @@ Expected exactly: `.gitignore`, `LICENSE`, `README.md`, `backend`, `extension`, 
 Run: `git ls-files figma-plugin | grep test-stops.cjs`
 Expected: no output (exit 1) — `test-stops.cjs` is gone.
 
-- [ ] **Step 5: Commit the reshape**
+- [x] **Step 5: Commit the reshape**
 
 ```bash
 git add -A
@@ -336,22 +353,22 @@ git commit -m "chore: reduce main to runnable core; dev tooling lives on develop
 
 **Files:** none (remote ref only)
 
-- [ ] **Step 1: STOP — request explicit user approval**
+- [x] **Step 1: STOP — request explicit user approval**
 
 This publishes the reshaped `main` (a fast-forward, no force). Do not proceed until the user explicitly says to push.
 
-- [ ] **Step 2: Confirm it is a fast-forward**
+- [x] **Step 2: Confirm it is a fast-forward**
 
 Run: `git log --oneline origin/main..main`
 Expected: exactly one new commit — the reshape. (If more/fewer, stop and investigate.)
 
-- [ ] **Step 3: Push**
+- [x] **Step 3: Push**
 
 ```bash
 git push origin main
 ```
 
-- [ ] **Step 4: Verify remote main tree**
+- [x] **Step 4: Verify remote main tree**
 
 Run: `git ls-tree -r --name-only origin/main | sed 's#/.*##' | sort -u`
 Expected: `.gitignore`, `LICENSE`, `README.md`, `backend`, `extension`, `figma-plugin`.
@@ -362,19 +379,19 @@ Expected: `.gitignore`, `LICENSE`, `README.md`, `backend`, `extension`, `figma-p
 
 **Files:** none (GitHub repo setting)
 
-- [ ] **Step 1: Check current default**
+- [x] **Step 1: Check current default**
 
 Run: `gh repo view gm-rahman/figma-extension --json defaultBranchRef -q .defaultBranchRef.name`
 Expected: `main`. If it already prints `main`, this task is done — skip the remaining steps.
 
-- [ ] **Step 2: STOP — request approval only if a change is needed**
+- [x] **Step 2: STOP — request approval only if a change is needed**
 
 If Step 1 did not print `main`, request explicit user approval, then run:
 ```bash
 gh repo edit gm-rahman/figma-extension --default-branch main
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `gh repo view gm-rahman/figma-extension --json defaultBranchRef -q .defaultBranchRef.name`
 Expected: `main`.
@@ -387,7 +404,7 @@ Prove nothing essential was excluded by building all three packages from a clean
 
 **Files:** none (throwaway clone)
 
-- [ ] **Step 1: Fresh checkout of main into a temp dir**
+- [x] **Step 1: Fresh checkout of main into a temp dir**
 
 ```bash
 TMP="${CLAUDE_JOB_DIR:-/tmp}/main-verify"
@@ -395,28 +412,28 @@ rm -rf "$TMP" && git clone -b main --single-branch "$(git remote get-url origin)
 ```
 (If offline / push not yet done, substitute a local worktree: `git worktree add "$TMP" main`.)
 
-- [ ] **Step 2: Build backend**
+- [x] **Step 2: Build backend**
 
 ```bash
 cd "$TMP/backend" && npm ci && npm run build
 ```
 Expected: `tsc` completes, `dist/` produced, exit 0.
 
-- [ ] **Step 3: Build extension**
+- [x] **Step 3: Build extension**
 
 ```bash
 cd "$TMP/extension" && npm ci && npm run build
 ```
 Expected: Vite build succeeds, `dist/` produced, exit 0.
 
-- [ ] **Step 4: Build figma-plugin**
+- [x] **Step 4: Build figma-plugin**
 
 ```bash
 cd "$TMP/figma-plugin" && npm ci && npm run build
 ```
 Expected: esbuild (via `build.js`) succeeds, `dist/` produced, exit 0.
 
-- [ ] **Step 5: Report**
+- [x] **Step 5: Report**
 
 All three builds pass → `main` is runnable-core-complete. If any build fails on a missing file, that file was mis-excluded: add it to the core set, amend Task 6, and re-verify. If offline blocks `npm ci`, report that this verification was deferred (do not claim it passed).
 

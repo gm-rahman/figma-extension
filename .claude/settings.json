@@ -2,7 +2,8 @@
   "enabledPlugins": {
     "claude-mem@thedotmack": true,
     "typescript-lsp@claude-plugins-official": true,
-    "obsidian@obsidian-skills": true,
-    "superpowers@claude-plugins-official": true
+    "obsidian@obsidian-skills": false,
+    "superpowers@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true
   }
 }
