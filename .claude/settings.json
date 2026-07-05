@@ -1,6 +1,0 @@
-{
-  "enabledPlugins": {
-    "claude-mem@thedotmack": true,
-    "typescript-lsp@claude-plugins-official": true
-  }
-}
