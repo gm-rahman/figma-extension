@@ -35,7 +35,7 @@ The 51 `extension` errors break into three root causes:
 Other confirmed facts:
 - **No `.github/` directory** — CI is greenfield.
 - **No root `package.json`** — the three packages are independent; CI installs deps per package.
-- **No committed lockfiles** — so `npm install`, not `npm ci`.
+- **Committed lockfiles exist** in all three packages (`package-lock.json`) — CI uses `npm ci`.
 - The `test/` visual-diff harness (`run-capture.mjs`) is **informational, not enforcing**:
   its only `process.exit(1)` is for page-load failure; a structural diff is merely
   printed. It also compares pixel-precise `x/y/width/height` against a **Windows-generated**
@@ -78,14 +78,15 @@ keeps its existing emitting `"build": "tsc"`.
 - **Triggers:** `pull_request` and `push` to `main`.
 - **Runner:** `ubuntu-latest` (tsc is OS-agnostic; safe cross-platform — unlike the
   visual-diff test).
-- **Node:** 20 LTS via `actions/setup-node`.
+- **Node:** 24 LTS via `actions/setup-node`.
 - **Matrix** over `[extension, figma-plugin, backend]`. Each job:
   1. `cd` into the package directory
-  2. `npm install`
+  2. `npm ci`
   3. `npm run typecheck`
 - tsc's native non-zero exit fails the job, which fails the check.
-- **Lockfiles:** none committed → `npm install` (not `npm ci`). Committing lockfiles for
-  reproducible installs is noted as an optional future improvement, deferred.
+- **Lockfiles:** committed `package-lock.json` present in each package → CI uses `npm ci`
+  (reproducible). Adding `@types/chrome` to `extension` requires regenerating and
+  committing its lockfile.
 
 ### 4. Error handling / risks
 
