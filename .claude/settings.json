@@ -4,6 +4,7 @@
     "typescript-lsp@claude-plugins-official": true,
     "obsidian@obsidian-skills": false,
     "superpowers@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true
+    "code-review@claude-plugins-official": true,
+    "github@claude-plugins-official": true
   }
 }
