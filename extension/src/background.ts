@@ -233,16 +233,38 @@ function dbgSend(tabId: number, method: string, params: object): Promise<any> {
     });
   });
 }
+// Tabs this service worker currently has the debugger attached to. Chrome can
+// auto-detach us at any time (the user dismisses the debugging banner, the tab
+// navigates or closes), so we track state and mirror those events here.
+const attachedTabs = new Set<number>();
+
+chrome.debugger.onDetach.addListener((source) => {
+  if (source.tabId != null) attachedTabs.delete(source.tabId);
+});
+
 function dbgAttach(tabId: number): Promise<void> {
   return new Promise((resolve, reject) => {
     chrome.debugger.attach({ tabId }, '1.3', () => {
       const err = chrome.runtime.lastError;
-      if (err) reject(new Error(err.message)); else resolve();
+      if (err) { reject(new Error(err.message)); return; }
+      attachedTabs.add(tabId);
+      resolve();
     });
   });
 }
 function dbgDetach(tabId: number): Promise<void> {
-  return new Promise((resolve) => chrome.debugger.detach({ tabId }, () => resolve()));
+  // If Chrome already detached us, calling detach() again sets
+  // runtime.lastError ("Debugger is not attached to the tab with id: N").
+  // Skip when we know we're detached, and always read lastError in the
+  // callback so it is never surfaced as an "Unchecked runtime.lastError".
+  if (!attachedTabs.has(tabId)) return Promise.resolve();
+  return new Promise((resolve) => {
+    chrome.debugger.detach({ tabId }, () => {
+      void chrome.runtime.lastError; // consume; detach is best-effort cleanup
+      attachedTabs.delete(tabId);
+      resolve();
+    });
+  });
 }
 
 function progress(message: string) {
