@@ -1,0 +1,15 @@
+{
+  "name": "figma-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Orchestrator for the backend, extension, and figma-plugin sub-projects (each has its own package.json).",
+  "scripts": {
+    "install:all": "npm install && npm --prefix backend install && npm --prefix extension install && npm --prefix figma-plugin install",
+    "dev": "concurrently -k -n backend,extension,plugin -c blue,green,magenta \"npm --prefix backend run dev\" \"npm --prefix extension run dev\" \"npm --prefix figma-plugin run dev\"",
+    "build": "npm --prefix backend run build && npm --prefix extension run build && npm --prefix figma-plugin run build",
+    "start:backend": "npm --prefix backend run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
