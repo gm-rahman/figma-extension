@@ -1,10 +1,11 @@
 {
   "enabledPlugins": {
-    "claude-mem@thedotmack": true,
+    "claude-mem@thedotmack": false,
     "typescript-lsp@claude-plugins-official": true,
-    "obsidian@obsidian-skills": false,
+    "obsidian@obsidian-skills": true,
     "superpowers@claude-plugins-official": true,
     "code-review@claude-plugins-official": true,
-    "github@claude-plugins-official": true
+    "github@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true
   }
 }
