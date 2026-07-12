@@ -67,6 +67,16 @@ function stripMatrixTranslation(transform: string): string {
   return `matrix(${a}, ${b}, ${c}, ${d}, 0, 0)`;
 }
 
+// CSS `text-align: start|end` are direction-relative; resolve to physical
+// left/right so the plugin (which only understands left/center/right/justify)
+// can honour them. Everything else passes through unchanged.
+function resolveTextAlign(align: string, direction: string): string {
+  const rtl = direction === 'rtl';
+  if (align === 'start') return rtl ? 'right' : 'left';
+  if (align === 'end')   return rtl ? 'left' : 'right';
+  return align;
+}
+
 function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
   const bgImage = s.backgroundImage;
   return {
@@ -77,7 +87,10 @@ function getStyleFromComputed(s: CSSStyleDeclaration): ElementStyle {
     fontSize:           s.fontSize,
     fontFamily:         s.fontFamily,
     fontWeight:         s.fontWeight,
-    textAlign:          s.textAlign,
+    // Resolve logical start/end to physical left/right (getComputedStyle returns
+    // "start"/"end" verbatim; the plugin only maps left/center/right). num-col
+    // cells use `text-align: end`, so without this their numbers stay left-aligned.
+    textAlign:          resolveTextAlign(s.textAlign, s.direction),
     lineHeight:         s.lineHeight,
     letterSpacing:      s.letterSpacing,
     borderRadius:            s.borderRadius,
@@ -889,7 +902,13 @@ const TRANSPARENT = /^rgba?\(0,\s*0,\s*0,\s*0\)$|transparent/;
 function hasVisibleBox(s: CSSStyleDeclaration): boolean {
   const hasBg     = !!s.backgroundColor && !TRANSPARENT.test(s.backgroundColor.replace(/\s/g, ''));
   const hasGrad   = s.backgroundImage && s.backgroundImage !== 'none';
-  const hasBorder  = s.borderStyle !== 'none' && parseFloat(s.borderWidth) > 0;
+  // Per-side, NOT the shorthand: a row separator with only `border-bottom`
+  // computes borderWidth to "0px 0px 1px 0px" and parseFloat(...) === 0, so the
+  // shorthand check misses single-side borders — dropping table separators and
+  // demoting bordered cells to plain text (losing box, padding, alignment).
+  const hasBorder  = (['Top', 'Right', 'Bottom', 'Left'] as const).some(side =>
+    (s as any)[`border${side}Style`] !== 'none' &&
+    parseFloat((s as any)[`border${side}Width`]) > 0);
   const hasRadius  = parseFloat(s.borderRadius) > 0;
   // A shadow only makes the box visible if at least one of its colours is
   // non-transparent — sr-only 1×1 spans carry `rgba(0,0,0,0) 0 0 …` shadows and
@@ -916,6 +935,16 @@ function isInlineTextContainer(el: Element, s: CSSStyleDeclaration): boolean {
   if (!(el as HTMLElement).innerText?.trim()) return false;
   const d = s.display;
   if (d === 'flex' || d === 'inline-flex' || d === 'grid' || d === 'inline-grid') return false;
+
+  // A container that itself paints a box (own background / border / shadow /
+  // outline / radius) must NOT be flattened to a bare text node — Figma text
+  // nodes can't carry a background or a stroke, so the box is lost. Dominant
+  // case: a table cell whose only child is an inline <span> (a number or label).
+  // Flattening drops the cell's bottom-border row separator AND its padding —
+  // right-aligned numbers snap to the edge, misaligning with the header, and the
+  // separators disappear. Keep it a frame so the box + padding survive (the
+  // inline text is re-added as a child at its real, already-correct coords).
+  if (hasVisibleBox(s)) return false;
 
   // A widget (search bar, toolbar, form row) must never be flattened to a single
   // text node: its fields are inputs/comboboxes whose visible text isn't in

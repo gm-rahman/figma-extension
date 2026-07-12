@@ -1,0 +1,120 @@
+{
+  "nodes": [
+    {
+      "id": "a1b2c3d4e5f60011",
+      "type": "group",
+      "x": -60,
+      "y": -80,
+      "width": 1240,
+      "height": 760,
+      "label": "Table border import fix (figma-plugin)",
+      "color": "5"
+    },
+    {
+      "id": "b1000000000000a1",
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 360,
+      "height": 200,
+      "color": "1",
+      "text": "## Symptom\n\nHTML `<table>` rebuilt in Figma loses its **row/column separator lines**.\n\nUser-list table (Image #2) imported with blank rows — no horizontal separators.\n\n_Everything else imported fine._"
+    },
+    {
+      "id": "b2000000000000a2",
+      "type": "text",
+      "x": 440,
+      "y": -40,
+      "width": 380,
+      "height": 300,
+      "color": "2",
+      "text": "## Root cause\n\n`applyBorderStroke` non-uniform branch:\n\n- set per-side weights (`strokeBottomWeight` ...) but **never populated `node.strokes`**\n- assigned `strokeTopColor` — a property Figma **does not have** (no-op)\n\nIn Figma, per-side stroke weights render **nothing** with an empty `strokes` array.\n\nRow separators = `border-bottom: 1px` (bottom-only = non-uniform) → this branch → no lines."
+    },
+    {
+      "id": "b3000000000000a3",
+      "type": "text",
+      "x": 900,
+      "y": -40,
+      "width": 380,
+      "height": 320,
+      "color": "4",
+      "text": "## Fix\n\n`figma-plugin/src/plugin.ts` ~L408\n\n1. Take first present side's colour → `node.strokes = [SOLID]` (Figma: one stroke colour per node)\n2. `strokeAlign = 'INSIDE'`\n3. `strokeWeight = max(sides)` as fallback\n4. Per-side weights: present → w, else 0\n\nOne helper — both callers (frames + rasterized nodes) fixed. Capture side untouched."
+    },
+    {
+      "id": "b4000000000000a4",
+      "type": "file",
+      "x": 900,
+      "y": 340,
+      "width": 380,
+      "height": 220,
+      "color": "6",
+      "file": "figma-plugin/src/plugin.ts"
+    },
+    {
+      "id": "b5000000000000a5",
+      "type": "text",
+      "x": 440,
+      "y": 320,
+      "width": 380,
+      "height": 220,
+      "color": "5",
+      "text": "## Verify\n\n- `tsc --noEmit` → No errors\n- `node build.js` → dist rebuilt\n- Manual: re-import Image #2 table in Figma → row lines appear\n\n_No unit test — needs Figma `FrameNode` runtime, can't run headless._"
+    },
+    {
+      "id": "b6000000000000a6",
+      "type": "text",
+      "x": 0,
+      "y": 320,
+      "width": 360,
+      "height": 200,
+      "color": "3",
+      "text": "## Caveat\n\nFigma has **no per-side stroke colour**. A table mixing border colours per side takes the first side's colour for all sides.\n\nReal tables use one separator colour → no visible impact."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1000000000000f1",
+      "fromNode": "b1000000000000a1",
+      "fromSide": "right",
+      "toNode": "b2000000000000a2",
+      "toSide": "left",
+      "toEnd": "arrow",
+      "label": "why?"
+    },
+    {
+      "id": "e2000000000000f2",
+      "fromNode": "b2000000000000a2",
+      "fromSide": "right",
+      "toNode": "b3000000000000a3",
+      "toSide": "left",
+      "toEnd": "arrow",
+      "label": "fix"
+    },
+    {
+      "id": "e3000000000000f3",
+      "fromNode": "b3000000000000a3",
+      "fromSide": "bottom",
+      "toNode": "b4000000000000a4",
+      "toSide": "top",
+      "toEnd": "arrow"
+    },
+    {
+      "id": "e4000000000000f4",
+      "fromNode": "b3000000000000a3",
+      "fromSide": "left",
+      "toNode": "b5000000000000a5",
+      "toSide": "right",
+      "toEnd": "arrow",
+      "label": "verify"
+    },
+    {
+      "id": "e5000000000000f5",
+      "fromNode": "b2000000000000a2",
+      "fromSide": "bottom",
+      "toNode": "b6000000000000a6",
+      "toSide": "top",
+      "toEnd": "arrow",
+      "label": "limit"
+    }
+  ]
+}

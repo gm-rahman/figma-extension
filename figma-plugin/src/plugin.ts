@@ -405,24 +405,25 @@ function applyBorderStroke(node: StrokeNode, style: ElementStyle): void {
         return;
       }
     }
-    // Non-uniform: per-side weights + colours via Figma API. Per-side colours
-    // (strokeTopColor etc.) exist on FrameNode but not RectangleNode; we cast
-    // through `any` so the same helper serves both, mirroring the original
-    // pattern from the frame branch.
-    for (const [side, s, w, c] of sides) {
-      if (!s || w <= 0) continue;
-      const col = parseCssColor(c || style.borderColor);
-      if (!col) continue;
-      const paint: SolidPaint = { type: 'SOLID', color: col.color, opacity: col.opacity };
+    // Non-uniform (e.g. a table row's bottom-only separator). Figma has ONE
+    // stroke colour per node — no per-side colour — but DOES support per-side
+    // WEIGHTS. Critically, per-side weights render NOTHING unless `strokes` is
+    // populated, so set it first (using the first present side's colour), then
+    // give each side its weight (0 = no line). `strokeWeight` set beforehand is
+    // the fallback for runtimes without per-side weights.
+    const present = sides.find(([, s, w]) => s && w > 0);
+    const col = present ? parseCssColor(present[3] || style.borderColor) : null;
+    if (col) {
+      node.strokes      = [{ type: 'SOLID', color: col.color, opacity: col.opacity }];
+      node.strokeAlign  = 'INSIDE'; // CSS borders default to INSIDE
+      node.strokeWeight = Math.max(topW, rightW, botW, leftW);
       try {
-        if      (side === 'top')    { node.strokeTopWeight = w;    (node as any).strokeTopColor = paint; }
-        else if (side === 'right')  { node.strokeRightWeight = w;  (node as any).strokeRightColor = paint; }
-        else if (side === 'bottom') { node.strokeBottomWeight = w; (node as any).strokeBottomColor = paint; }
-        else if (side === 'left')   { node.strokeLeftWeight = w;   (node as any).strokeLeftColor = paint; }
-      } catch { /* older runtime: fall through */ }
+        node.strokeTopWeight    = topS && topW > 0 ? topW : 0;
+        node.strokeRightWeight  = rightS && rightW > 0 ? rightW : 0;
+        node.strokeBottomWeight = botS && botW > 0 ? botW : 0;
+        node.strokeLeftWeight   = leftS && leftW > 0 ? leftW : 0;
+      } catch { /* older runtime: uniform strokeWeight above still shows a border */ }
     }
-    // CSS borders default to INSIDE; emulate by setting the overall align.
-    node.strokeAlign = 'INSIDE';
     return;
   }
   // CSS outline (rings, focus outlines) → OUTSIDE stroke; only when no

@@ -1,6 +1,14 @@
 {
   "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "obsidian@obsidian-skills": true,
     "claude-mem@thedotmack": true,
-    "typescript-lsp@claude-plugins-official": true
+    "ponytail@ponytail": true,
+    "github@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true
   }
 }
